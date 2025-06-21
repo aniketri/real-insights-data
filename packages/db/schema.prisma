@@ -1,0 +1,696 @@
+// Real Insights - Commercial Real Estate Debt Management Platform
+// MongoDB Schema with Prisma
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "darwin-arm64"]
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// Core Organization Model
+model Organization {
+  id                 String             @id @default(auto()) @map("_id") @db.ObjectId
+  name               String
+  subscriptionStatus SubscriptionStatus @default(TRIAL)
+  subscriptionTier   SubscriptionTier   @default(BASIC)
+  billingEmail       String?
+  phone              String?
+  address            String?
+  website            String?
+  taxId              String?
+  settings           Json?              // Organization-level settings
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  // Relations
+  users       User[]
+  portfolios  Portfolio[]
+  properties  Property[]
+  loans       Loan[]
+  lenders     Lender[]
+  funds       Fund[]
+  alerts      Alert[]
+  marketData  MarketData[]
+  aiQueries   AIQuery[]
+  reports     Report[]
+  documents   Document[]
+
+  @@map("organizations")
+}
+
+// Enhanced User Model with Permissions
+model User {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  email         String    @unique
+  firstName     String?
+  lastName      String?
+  name          String? // For compatibility with NextAuth
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  phone         String?
+  jobTitle      String?
+  department    String?
+  
+  // Permission and Role System
+  role          Role      @default(MEMBER)
+  permissions   String[]  // Granular permissions array
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+  
+  // Organization relation
+  organizationId String @db.ObjectId
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  accounts       Account[]
+  sessions       Session[]
+  notes          Note[]
+  documents      Document[]
+  alerts         Alert[]
+  aiQueries      AIQuery[]
+  createdReports Report[]
+
+  @@map("users")
+}
+
+// Portfolio Management
+model Portfolio {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  description    String?
+  strategy       String?  // Investment strategy
+  targetReturn   Float?   // Target return percentage
+  riskProfile    String?  // Risk assessment
+  managerId      String?  // Portfolio manager
+  
+  organizationId String @db.ObjectId
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  properties Property[]
+  loans      Loan[]
+
+  @@map("portfolios")
+}
+
+// Enhanced Property Model
+model Property {
+  id               String       @id @default(auto()) @map("_id") @db.ObjectId
+  name             String
+  address          String
+  city             String?
+  state            String?
+  zipCode          String?
+  country          String?      @default("USA")
+  
+  // Property Details
+  propertyType     PropertyType
+  subType          String?      // Office Class A, Retail Strip Center, etc.
+  yearBuilt        Int?
+  totalSqft        Float?
+  leasableSqft     Float?
+  units            Int?         // For multifamily
+  floors           Int?
+  parkingSpaces    Int?
+  
+  // Financial Information
+  purchasePrice    Float?
+  currentValue     Float?
+  appraisalDate    DateTime?
+  appraisalValue   Float?
+  annualNOI        Float?       // Net Operating Income
+  occupancyRate    Float?       // Percentage
+  
+  // Location scoring
+  walkScore        Int?
+  transitScore     Int?
+  bikeScore        Int?
+  
+  // Relations
+  portfolioId      String? @db.ObjectId
+  portfolio        Portfolio? @relation(fields: [portfolioId], references: [id])
+  organizationId   String @db.ObjectId
+  organization     Organization @relation(fields: [organizationId], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  loans Loan[]
+
+  @@map("properties")
+}
+
+// Comprehensive Loan Model
+model Loan {
+  id                    String         @id @default(auto()) @map("_id") @db.ObjectId
+  loanNumber            String?        // Internal loan tracking number
+  
+  // Basic Loan Information
+  originalLoanBalance   Float
+  currentBalance        Float
+  originationDate       DateTime
+  maturityDate          DateTime
+  
+  // Interest Rate Information
+  interestRate          Float
+  rateType              RateType       @default(FIXED)
+  indexType             IndexType?     // SOFR, LIBOR, etc.
+  rateSpread            Float?         // Spread over index
+  rateFloor             Float?         // Interest rate floor
+  rateCap               Float?         // Interest rate cap
+  
+  // Amortization
+  amortizationType      AmortizationType @default(FULLY_AMORTIZING)
+  amortizationPeriod    Int            // in months
+  paymentFrequency      PaymentFrequency @default(MONTHLY)
+  
+  // Financial Metrics
+  ltv                   Float?         // Loan to Value
+  dscr                  Float?         // Debt Service Coverage Ratio
+  debtYield             Float?
+  
+  // Loan Features
+  isRecourse            Boolean        @default(false)
+  isGuaranteed          Boolean        @default(false)
+  guarantorInfo         String?
+  
+  // Prepayment
+  prepaymentPenalty     Boolean        @default(false)
+  prepaymentTerms       String?
+  
+  // Status and Classification
+  loanStatus            LoanStatus     @default(CURRENT)
+  riskRating            RiskRating?
+  tags                  String[]
+  
+  // Relations
+  propertyId            String @db.ObjectId
+  property              Property @relation(fields: [propertyId], references: [id])
+  
+  lenderId              String @db.ObjectId
+  lender                Lender @relation(fields: [lenderId], references: [id])
+  
+  fundId                String? @db.ObjectId
+  fund                  Fund? @relation(fields: [fundId], references: [id])
+  
+  portfolioId           String? @db.ObjectId
+  portfolio             Portfolio? @relation(fields: [portfolioId], references: [id])
+  
+  organizationId        String @db.ObjectId
+  organization          Organization @relation(fields: [organizationId], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  amortizationSchedule AmortizationSchedule[]
+  covenants           Covenant[]
+  notes               Note[]
+  documents           Document[]
+  alerts              Alert[]
+
+  @@map("loans")
+}
+
+// Detailed Amortization Schedule
+model AmortizationSchedule {
+  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  paymentNumber      Int
+  paymentDate        DateTime
+  beginningBalance   Float
+  scheduledPayment   Float
+  principalComponent Float
+  interestComponent  Float
+  endingBalance      Float
+  cumulativePrincipal Float
+  cumulativeInterest Float
+  
+  loanId String @db.ObjectId
+  loan   Loan @relation(fields: [loanId], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("amortization_schedules")
+}
+
+// Enhanced Lender Model
+model Lender {
+  id             String @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  lenderType     LenderType?
+  contactName    String?
+  email          String?
+  phone          String?
+  address        String?
+  website        String?
+  
+  // Lender specific information
+  minLoanSize    Float?
+  maxLoanSize    Float?
+  preferredLTV   Float?
+  preferredDSCR  Float?
+  
+  organizationId String @db.ObjectId
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  loans Loan[]
+
+  @@unique([name, organizationId])
+  @@map("lenders")
+}
+
+// Fund/Investment Vehicle Model
+model Fund {
+  id               String @id @default(auto()) @map("_id") @db.ObjectId
+  name             String
+  fundType         FundType?
+  totalCommitment  Float?
+  totalDeployed    Float?
+  targetReturn     Float?
+  managementFee    Float?
+  performanceFee   Float?
+  
+  organizationId String @db.ObjectId
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  loans Loan[]
+
+  @@unique([name, organizationId])
+  @@map("funds")
+}
+
+// Covenant Tracking
+model Covenant {
+  id             String        @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  type           CovenantType
+  description    String?
+  threshold      Float?
+  operator       String?       // >=, <=, =, etc.
+  checkFrequency String        // Monthly, Quarterly, Annually
+  isInCompliance Boolean       @default(true)
+  lastChecked    DateTime?
+  nextCheckDate  DateTime?
+  
+  loanId String @db.ObjectId
+  loan   Loan @relation(fields: [loanId], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("covenants")
+}
+
+// Enhanced Notes System
+model Note {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  title     String?
+  content   String
+  noteType  NoteType  @default(GENERAL)
+  priority  Priority? @default(NORMAL)
+  isPrivate Boolean   @default(false)
+  tags      String[]
+  
+  loanId String @db.ObjectId
+  loan   Loan @relation(fields: [loanId], references: [id])
+  
+  authorId String @db.ObjectId
+  author   User @relation(fields: [authorId], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("notes")
+}
+
+// Document Management System
+model Document {
+  id           String       @id @default(auto()) @map("_id") @db.ObjectId
+  fileName     String
+  originalName String?
+  fileType     String
+  fileSize     Int?
+  storageKey   String       // S3 key or similar
+  url          String?
+  documentType DocumentType
+  description  String?
+  tags         String[]
+  
+  // Document metadata
+  isConfidential Boolean @default(false)
+  expiresAt      DateTime?
+  version        Int     @default(1)
+  
+  // Relations
+  loanId String? @db.ObjectId
+  loan   Loan? @relation(fields: [loanId], references: [id])
+  
+  organizationId String @db.ObjectId
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  
+  uploadedById String @db.ObjectId
+  uploadedBy   User @relation(fields: [uploadedById], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("documents")
+}
+
+// Alert and Reminder System
+model Alert {
+  id           String      @id @default(auto()) @map("_id") @db.ObjectId
+  title        String
+  message      String
+  alertType    AlertType
+  priority     Priority    @default(NORMAL)
+  triggerDate  DateTime
+  isDismissed  Boolean     @default(false)
+  dismissedAt  DateTime?
+  
+  // Alert configuration
+  isRecurring  Boolean     @default(false)
+  recurrence   String?     // Cron expression for recurring alerts
+  
+  // Relations
+  userId String @db.ObjectId
+  user   User @relation(fields: [userId], references: [id])
+  
+  loanId String? @db.ObjectId
+  loan   Loan? @relation(fields: [loanId], references: [id])
+  
+  organizationId String @db.ObjectId
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("alerts")
+}
+
+// Market Data for SOFR, LIBOR, etc.
+model MarketData {
+  id        String         @id @default(auto()) @map("_id") @db.ObjectId
+  rateName  String         // SOFR, LIBOR, Prime, etc.
+  rateType  MarketRateType
+  date      DateTime
+  rateValue Float
+  source    String?        // Bloomberg, Fed, etc.
+  
+  organizationId String @db.ObjectId
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  
+  createdAt DateTime @default(now())
+
+  @@unique([rateName, date])
+  @@map("market_data")
+}
+
+// AI Query System
+model AIQuery {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  query    String
+  response String?
+  context  Json?  // Additional context for the query
+  
+  userId String @db.ObjectId
+  user   User @relation(fields: [userId], references: [id])
+  
+  organizationId String @db.ObjectId
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  
+  createdAt DateTime @default(now())
+
+  @@map("ai_queries")
+}
+
+// Report Generation System
+model Report {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  reportType  ReportType
+  parameters  Json?      // Report parameters and filters
+  generatedData Json?    // Generated report data
+  isScheduled Boolean    @default(false)
+  schedule    String?    // Cron expression for scheduled reports
+  
+  createdById String @db.ObjectId
+  createdBy   User @relation(fields: [createdById], references: [id])
+  
+  organizationId String @db.ObjectId
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("reports")
+}
+
+// NextAuth.js Models (unchanged for compatibility)
+model Account {
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String   @unique
+  userId       String   @db.ObjectId
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model OneTimePassword {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String
+  token     String   @unique
+  expires   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("one_time_passwords")
+}
+
+// Enums
+enum Role {
+  ADMIN
+  MANAGER
+  MEMBER
+  VIEWER
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  SUSPENDED
+}
+
+enum SubscriptionTier {
+  BASIC
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum PropertyType {
+  MULTIFAMILY
+  OFFICE
+  RETAIL
+  INDUSTRIAL
+  HOSPITALITY
+  MIXED_USE
+  LAND
+  STORAGE
+  MEDICAL
+  OTHER
+}
+
+enum RateType {
+  FIXED
+  FLOATING
+  HYBRID
+}
+
+enum IndexType {
+  SOFR
+  LIBOR
+  PRIME
+  TREASURY
+  CUSTOM
+}
+
+enum AmortizationType {
+  FULLY_AMORTIZING
+  INTEREST_ONLY
+  PARTIAL_AMORTIZATION
+  BALLOON
+}
+
+enum PaymentFrequency {
+  MONTHLY
+  QUARTERLY
+  SEMI_ANNUALLY
+  ANNUALLY
+}
+
+enum LoanStatus {
+  CURRENT
+  PAST_DUE_30
+  PAST_DUE_60
+  PAST_DUE_90
+  DEFAULT
+  PAID_OFF
+  REFINANCED
+}
+
+enum RiskRating {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum LenderType {
+  BANK
+  CREDIT_UNION
+  PRIVATE_LENDER
+  LIFE_INSURANCE
+  CMBS
+  BRIDGE_LENDER
+  HARD_MONEY
+  OTHER
+}
+
+enum FundType {
+  DEBT_FUND
+  EQUITY_FUND
+  HYBRID_FUND
+  OPPORTUNITY_FUND
+  VALUE_ADD
+  CORE_PLUS
+}
+
+enum CovenantType {
+  DSCR
+  LTV
+  OCCUPANCY
+  FINANCIAL_REPORTING
+  INSURANCE
+  ENVIRONMENTAL
+  CUSTOM
+}
+
+enum NoteType {
+  GENERAL
+  PAYMENT
+  COVENANT
+  INSPECTION
+  LEGAL
+  FINANCIAL
+  MAINTENANCE
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  CRITICAL
+}
+
+enum DocumentType {
+  LOAN_AGREEMENT
+  PROMISSORY_NOTE
+  DEED_OF_TRUST
+  APPRAISAL
+  ENVIRONMENTAL_REPORT
+  INSURANCE_POLICY
+  FINANCIAL_STATEMENT
+  RENT_ROLL
+  LEASE_AGREEMENT
+  INSPECTION_REPORT
+  LEGAL_DOCUMENT
+  CORRESPONDENCE
+  OTHER
+}
+
+enum AlertType {
+  PAYMENT_DUE
+  MATURITY_WARNING
+  COVENANT_BREACH
+  DOCUMENT_EXPIRY
+  RATE_RESET
+  INSPECTION_DUE
+  INSURANCE_RENEWAL
+  CUSTOM
+}
+
+enum MarketRateType {
+  OVERNIGHT
+  ONE_MONTH
+  THREE_MONTH
+  SIX_MONTH
+  ONE_YEAR
+  PRIME
+  TREASURY_10Y
+}
+
+enum ReportType {
+  PORTFOLIO_SUMMARY
+  LOAN_AGING
+  MATURITY_SCHEDULE
+  COVENANT_COMPLIANCE
+  PERFORMANCE_METRICS
+  CASH_FLOW_PROJECTION
+  RISK_ANALYSIS
+  CUSTOM
+} 

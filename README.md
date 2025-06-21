@@ -1,24 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Real Insights - Commercial Real Estate Debt Management
+
+Welcome to Real Insights, a subscription-based SaaS platform for real estate investors and asset managers. This repository contains the source code for the entire platform.
+
+## Project Structure
+
+This project is a monorepo managed with pnpm workspaces.
+
+- `apps/web`: The Next.js frontend application.
+- `apps/api`: The NestJS backend API.
+- `packages/ui`: Shared UI components for the frontend.
+- `packages/db`: Database schema, migrations, and seed scripts.
+- `packages/config`: Shared configuration files (ESLint, TypeScript, etc.).
 
 ## Getting Started
 
-First, run the development server:
+1.  **Install dependencies:**
+    ```bash
+    pnpm install
+    ```
 
+2.  **Set up environment variables:**
+    Copy `.env.example` to `.env` in both `apps/web` and `apps/api` and fill in the required values.
+
+3.  **Run the development servers:**
 ```bash
-npm run dev
-# or
-yarn dev
-# or
 pnpm dev
-# or
-bun dev
-```
+    ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This will start the frontend and backend applications concurrently.
 
 ## Learn More
 
