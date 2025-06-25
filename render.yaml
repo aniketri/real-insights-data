@@ -3,8 +3,8 @@ services:
     name: real-insights-api
     env: node
     plan: starter
-    buildCommand: cd apps/api && npm install && npm run build
-    startCommand: cd apps/api && npm run start:prod
+    buildCommand: npm install -g pnpm@9.6.0 && pnpm install --frozen-lockfile && pnpm build:api
+    startCommand: cd apps/api && pnpm start:prod
     envVars:
       - key: NODE_ENV
         value: production
