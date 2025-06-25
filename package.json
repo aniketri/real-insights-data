@@ -14,8 +14,8 @@
     "db:push": "dotenv -- pnpm --filter db exec prisma db push --skip-generate",
     "db:generate": "pnpm --filter db exec prisma generate",
     "db:studio": "dotenv -- pnpm --filter db exec prisma studio",
-    "build:web": "pnpm --filter web build",
-    "build:api": "pnpm --filter api build",
+    "build:web": "pnpm db:generate && pnpm --filter @repo/db build && pnpm --filter web build",
+    "build:api": "pnpm db:generate && pnpm --filter @repo/db build && pnpm --filter api build",
     "start:web": "pnpm --filter web start",
     "start:api": "pnpm --filter api start:prod",
     "deploy:prepare": "pnpm db:generate && pnpm build"
