@@ -1,14 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@repo/db';
 
-// Conditionally import resend only in runtime
-const getResend = async () => {
-  if (typeof window === 'undefined' && process.env.NODE_ENV !== 'development') {
-    const { resend } = await import('@/lib/mailer');
-    return resend;
-  }
-  return null;
-};
+import { resend } from '@/lib/mailer';
 import { OtpEmail } from '@/components/emails/otp-email';
 
 export async function POST(request: Request) {
@@ -52,12 +45,14 @@ export async function POST(request: Request) {
     });
 
     // Send OTP email
-    await resend.emails.send({
-      from: process.env.FROM_EMAIL || 'noreply@realinsights.com',
-      to: email,
-      subject: 'Your New Verification Code - Real Insights',
-      react: OtpEmail({ otp }),
-    });
+    if (resend) {
+      await resend.emails.send({
+        from: process.env.FROM_EMAIL || 'noreply@realinsights.com',
+        to: email,
+        subject: 'Your New Verification Code - Real Insights',
+        react: OtpEmail({ otp }),
+      });
+    }
 
     return NextResponse.json({ 
       message: 'A new verification code has been sent to your email.' 
