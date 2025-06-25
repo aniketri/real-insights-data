@@ -5,6 +5,11 @@ import { resend } from '@/lib/mailer';
 
 export async function POST(req: NextRequest) {
   try {
+    // Skip execution during build time
+    if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
+      return NextResponse.json({ message: 'Service temporarily unavailable' }, { status: 503 });
+    }
+    
     const session = await auth();
     
     // Only admins can invite users
@@ -79,25 +84,27 @@ export async function POST(req: NextRequest) {
     // Send invitation email
     const inviteUrl = `${process.env.NEXTAUTH_URL}/accept-invite?token=${inviteToken}&email=${encodeURIComponent(email)}`;
     
-    await resend.emails.send({
-      from: process.env.FROM_EMAIL || 'noreply@realinsights.com',
-      to: email,
-      subject: `You're invited to join ${adminUser.organization?.name} on Real Insights`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>You're invited to Real Insights!</h2>
-          <p>Hello,</p>
-          <p>${adminUser.name || adminUser.email} has invited you to join <strong>${adminUser.organization?.name}</strong> on Real Insights.</p>
-          <p><strong>Role:</strong> ${role}</p>
-          <p>Click the link below to accept your invitation and set up your account:</p>
-          <a href="${inviteUrl}" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 16px 0;">Accept Invitation</a>
-          <p>This invitation will expire in 24 hours.</p>
-          <p>If you didn't expect this invitation, you can safely ignore this email.</p>
-          <hr style="margin: 24px 0;">
-          <p style="color: #666; font-size: 14px;">Real Insights - Commercial Real Estate Debt Management</p>
-        </div>
-      `,
-    });
+    if (resend) {
+      await resend.emails.send({
+        from: process.env.FROM_EMAIL || 'noreply@realinsights.com',
+        to: email,
+        subject: `You're invited to join ${adminUser.organization?.name} on Real Insights`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2>You're invited to Real Insights!</h2>
+            <p>Hello,</p>
+            <p>${adminUser.name || adminUser.email} has invited you to join <strong>${adminUser.organization?.name}</strong> on Real Insights.</p>
+            <p><strong>Role:</strong> ${role}</p>
+            <p>Click the link below to accept your invitation and set up your account:</p>
+            <a href="${inviteUrl}" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 16px 0;">Accept Invitation</a>
+            <p>This invitation will expire in 24 hours.</p>
+            <p>If you didn't expect this invitation, you can safely ignore this email.</p>
+            <hr style="margin: 24px 0;">
+            <p style="color: #666; font-size: 14px;">Real Insights - Commercial Real Estate Debt Management</p>
+          </div>
+        `,
+      });
+    }
 
     return NextResponse.json({ 
       message: `Invitation sent to ${email}`,

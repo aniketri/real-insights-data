@@ -6,6 +6,10 @@ import { OtpEmail } from '@/components/emails/otp-email';
 
 export async function POST(req: NextRequest) {
   try {
+    // Skip execution during build time
+    if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
+      return NextResponse.json({ message: 'Service temporarily unavailable' }, { status: 503 });
+    }
     const { email, password } = await req.json();
 
     // Check if user already exists and is verified
@@ -60,12 +64,14 @@ export async function POST(req: NextRequest) {
     });
 
     // Send OTP email
-    await resend.emails.send({
-      from: process.env.FROM_EMAIL || 'noreply@realinsights.com',
-      to: email,
-      subject: 'Verify your email address - Real Insights',
-      react: OtpEmail({ otp }),
-    });
+    if (resend) {
+      await resend.emails.send({
+        from: process.env.FROM_EMAIL || 'noreply@realinsights.com',
+        to: email,
+        subject: 'Verify your email address - Real Insights',
+        react: OtpEmail({ otp }),
+      });
+    }
 
     return NextResponse.json({ 
       message: 'Account created successfully. Please check your email for the verification code.' 

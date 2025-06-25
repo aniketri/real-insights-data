@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@repo/db';
-import { resend } from '@/lib/mailer';
+
+// Conditionally import resend only in runtime
+const getResend = async () => {
+  if (typeof window === 'undefined' && process.env.NODE_ENV !== 'development') {
+    const { resend } = await import('@/lib/mailer');
+    return resend;
+  }
+  return null;
+};
 import { OtpEmail } from '@/components/emails/otp-email';
 
 export async function POST(request: Request) {
