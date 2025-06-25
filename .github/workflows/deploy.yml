@@ -18,18 +18,32 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check if Vercel secrets are configured
+        id: check-vercel
+        run: |
+          if [[ -n "${{ secrets.VERCEL_TOKEN }}" && -n "${{ secrets.VERCEL_ORG_ID }}" && -n "${{ secrets.VERCEL_PROJECT_ID }}" ]]; then
+            echo "configured=true" >> $GITHUB_OUTPUT
+          else
+            echo "configured=false" >> $GITHUB_OUTPUT
+            echo "⚠️  Vercel secrets not configured. Skipping deployment."
+            echo "📚 See DEPLOYMENT_GUIDE.md for setup instructions."
+          fi
+
       - name: Install pnpm
+        if: steps.check-vercel.outputs.configured == 'true'
         uses: pnpm/action-setup@v2
         with:
           version: 9.6.0
 
       - name: Setup Node.js
+        if: steps.check-vercel.outputs.configured == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'pnpm'
 
       - name: Deploy to Vercel
+        if: steps.check-vercel.outputs.configured == 'true'
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
@@ -43,7 +57,19 @@ jobs:
     name: Deploy Backend to Render
     
     steps:
+      - name: Check if Render secrets are configured
+        id: check-render
+        run: |
+          if [[ -n "${{ secrets.RENDER_SERVICE_ID }}" && -n "${{ secrets.RENDER_API_KEY }}" ]]; then
+            echo "configured=true" >> $GITHUB_OUTPUT
+          else
+            echo "configured=false" >> $GITHUB_OUTPUT
+            echo "⚠️  Render secrets not configured. Skipping deployment."
+            echo "📚 See DEPLOYMENT_GUIDE.md for setup instructions."
+          fi
+
       - name: Deploy to Render
+        if: steps.check-render.outputs.configured == 'true'
         uses: johnbeynon/render-deploy-action@v0.0.8
         with:
           service-id: ${{ secrets.RENDER_SERVICE_ID }}

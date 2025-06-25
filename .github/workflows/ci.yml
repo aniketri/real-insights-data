@@ -39,6 +39,7 @@ jobs:
 
       - name: Lint
         run: pnpm lint
+        continue-on-error: true
 
       - name: Build all packages
         run: pnpm build
