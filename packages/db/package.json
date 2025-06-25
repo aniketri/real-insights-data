@@ -6,7 +6,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "pnpm run generate && tsc",
+    "build": "pnpm run generate && pnpm exec tsc",
     "generate": "prisma generate",
     "db:push": "dotenv -e ../../.env -- prisma db push --skip-generate",
     "db:seed": "tsx seed.ts",
