@@ -94,7 +94,7 @@ export const authOptions: AuthOptions = {
 
             console.log('Organization created:', organization.id);
 
-            // Create the user with organization - first user in org becomes admin
+            // Create the user with organization - new users get MEMBER role by default
             existingUser = await prisma.user.create({
               data: {
                 email: user.email!,
@@ -102,8 +102,8 @@ export const authOptions: AuthOptions = {
                 image: user.image,
                 emailVerified: new Date(), // OAuth users are pre-verified
                 organizationId: organization.id,
-                role: 'ADMIN', // First user in their own organization is admin
-                permissions: ['READ_ALL', 'WRITE_ALL', 'DELETE_ALL', 'ADMIN_PANEL'], // Full permissions for organization owner
+                role: 'MEMBER', // Default role for new users
+                permissions: ['READ_ALL'], // Basic permissions for new users
               },
             });
 

@@ -45,6 +45,8 @@ export class OtpController {
         data: {
           email: verifyOtpDto.email,
           name: verifyOtpDto.email.split('@')[0], // A default name
+          role: 'MEMBER', // Default role for new users
+          permissions: ['READ_ALL'], // Basic permissions for new users
           organization: {
             create: {
               name: `${verifyOtpDto.email.split('@')[0]}'s Organization`,

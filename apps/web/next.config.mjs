@@ -4,7 +4,7 @@ dotenv.config({ path: '../../.env' });
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ['@repo/ui'],
+  transpilePackages: ['@repo/ui', '@repo/db'],
   experimental: {
     outputFileTracingIncludes: {
       '/*': ['./node_modules/.prisma/client/**/*'],
@@ -17,7 +17,7 @@ const nextConfig = {
           'node_modules/esbuild-linux-64',
         ],
       },
-    }),
+    })
   },
   images: {
     remotePatterns: [
@@ -32,6 +32,40 @@ const nextConfig = {
   ...(process.env.NODE_ENV === 'production' && {
     output: 'standalone',
   }),
+  env: {
+    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+    DATABASE_URL: process.env.DATABASE_URL,
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+    MICROSOFT_CLIENT_ID: process.env.MICROSOFT_CLIENT_ID,
+    MICROSOFT_CLIENT_SECRET: process.env.MICROSOFT_CLIENT_SECRET,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    API_URL: process.env.API_URL,
+  },
+  publicRuntimeConfig: {
+    API_URL: process.env.NEXT_PUBLIC_API_URL || process.env.API_URL,
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/api/v1/:path*',
+        destination: `${process.env.API_URL || 'http://localhost:3001'}/api/v1/:path*`,
+      },
+    ];
+  },
+  async headers() {
+    return [
+      {
+        source: '/api/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET,POST,PUT,DELETE,OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig; 

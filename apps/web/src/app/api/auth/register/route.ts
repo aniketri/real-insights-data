@@ -40,8 +40,8 @@ export async function POST(req: NextRequest) {
         name: email.split('@')[0],
         // TODO: Add firstName when schema is updated
         organizationId: organization.id,
-        role: 'ADMIN', // First user in their own organization is admin
-        permissions: ['READ_ALL', 'WRITE_ALL', 'DELETE_ALL', 'ADMIN_PANEL'], // Full permissions for organization owner
+        role: 'MEMBER', // Default role for new users
+        permissions: ['READ_ALL'], // Basic permissions for new users
       },
     });
 

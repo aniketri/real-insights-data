@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface DashboardData {
   totalDebt: number;
@@ -10,16 +12,31 @@ interface DashboardData {
   debtByLender: Record<string, number>;
   maturitySchedule: Record<string, number>;
   loans: any[];
+  hasData: boolean;
 }
 
 export default function Dashboard() {
+  const { data: session } = useSession();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   const [propertyTypeFilter, setPropertyTypeFilter] = useState<string>('');
   const [lenderFilter, setLenderFilter] = useState<string>('');
   const [fundFilter, setFundFilter] = useState<string>('');
+
+  useEffect(() => {
+    // Check if coming from successful onboarding
+    if (searchParams.get('welcome') === 'true') {
+      setShowWelcome(true);
+      // Remove the welcome parameter from URL after showing
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     async function fetchData() {
@@ -35,6 +52,12 @@ export default function Dashboard() {
         }
         const jsonData = await res.json();
         setData(jsonData);
+        
+        // Check if user needs onboarding (no portfolios, properties, or loans)
+        if (!jsonData.hasData && session?.user && !showWelcome) {
+          router.push('/onboarding');
+          return;
+        }
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -42,19 +65,84 @@ export default function Dashboard() {
       }
     }
 
-    fetchData();
-  }, [propertyTypeFilter, lenderFilter, fundFilter]);
+    if (session) {
+      fetchData();
+    }
+  }, [propertyTypeFilter, lenderFilter, fundFilter, session, router, showWelcome]);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your portfolio...</p>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
-    return <div>Error: {error}</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-600 text-lg font-semibold mb-2">Error loading dashboard</div>
+          <p className="text-gray-600">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (!data) {
-    return <div>No data available</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">No data available</p>
+          <button 
+            onClick={() => router.push('/onboarding')}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Set Up Your Portfolio
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Welcome message for new users who just completed onboarding
+  if (showWelcome) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
+        <div className="max-w-2xl mx-auto text-center p-8">
+          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="h-10 w-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Welcome to Real Insights!</h1>
+          <p className="text-gray-600 text-lg mb-8">
+            Your portfolio has been set up successfully. You can now start adding loans, 
+            tracking performance, and generating reports.
+          </p>
+          <div className="space-y-4">
+            <button
+              onClick={() => setShowWelcome(false)}
+              className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200"
+            >
+              View Dashboard
+            </button>
+            <div className="text-sm text-gray-500">
+              <p>Next steps: Add your first loan or explore the AI query feature</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const formatCurrency = (value: number) => {
@@ -198,56 +286,32 @@ export default function Dashboard() {
       <h2 className="text-[#111518] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">Loans</h2>
       <div className="px-4 py-3 @container">
           <div className="flex overflow-hidden rounded-lg border border-[#dce1e5] bg-white">
-          <table className="flex-1">
+            <table className="flex-1 whitespace-nowrap">
               <thead>
-              <tr className="bg-white">
-                  <th className="px-4 py-3 text-left text-[#111518] w-[200px] text-sm font-medium leading-normal">
-                  Loan Name
-                  </th>
-                  <th className="px-4 py-3 text-left text-[#111518] w-[200px] text-sm font-medium leading-normal">
-                  Property
-                  </th>
-                  <th className="px-4 py-3 text-left text-[#111518] w-[150px] text-sm font-medium leading-normal">
-                  Loan Type
-                  </th>
-                  <th className="px-4 py-3 text-left text-[#111518] w-[150px] text-sm font-medium leading-normal">
-                  Loan Amount
-                  </th>
-                  <th className="px-4 py-3 text-left text-[#111518] w-[150px] text-sm font-medium leading-normal">
-                  Interest Rate
-                  </th>
-                  <th className="px-4 py-3 text-left text-[#111518] w-[150px] text-sm font-medium leading-normal">
-                  Maturity Date
-                  </th>
-                  <th className="px-4 py-3 text-left text-[#111518] w-60 text-sm font-medium leading-normal">Status</th>
-              </tr>
+                <tr className="bg-white">
+                  <th className="px-4 py-3 text-left text-[#111518] w-[200px] text-sm font-medium leading-normal">Loan</th>
+                  <th className="px-4 py-3 text-left text-[#111518] w-[100px] text-sm font-medium leading-normal">Property</th>
+                  <th className="px-4 py-3 text-left text-[#111518] w-[100px] text-sm font-medium leading-normal">Lender</th>
+                  <th className="px-4 py-3 text-right text-[#111518] w-[100px] text-sm font-medium leading-normal">Balance</th>
+                  <th className="px-4 py-3 text-right text-[#111518] w-[100px] text-sm font-medium leading-normal">Rate</th>
+                  <th className="px-4 py-3 text-left text-[#111518] w-[100px] text-sm font-medium leading-normal">Maturity</th>
+                </tr>
               </thead>
               <tbody>
-              {data.loans.map((loan) => (
+                {data.loans.map((loan: any) => (
                   <tr key={loan.id} className="border-t border-t-[#dce1e5]">
-                  <td className="h-[72px] px-4 py-2 w-[200px] text-[#111518] text-sm font-normal leading-normal">{loan.propertyName}</td>
-                  <td className="h-[72px] px-4 py-2 w-[200px] text-[#637888] text-sm font-normal leading-normal">
-                      {loan.propertyName}
-                  </td>
-                  <td className="h-[72px] px-4 py-2 w-[150px] text-[#637888] text-sm font-normal leading-normal">{loan.rateType}</td>
-                  <td className="h-[72px] px-4 py-2 w-[150px] text-[#637888] text-sm font-normal leading-normal">
-                      {formatCurrency(loan.currentBalance)}
-                  </td>
-                  <td className="h-[72px] px-4 py-2 w-[150px] text-[#637888] text-sm font-normal leading-normal">{formatPercent(loan.interestRate)}</td>
-                  <td className="h-[72px] px-4 py-2 w-[150px] text-[#637888] text-sm font-normal leading-normal">
+                    <td className="px-4 py-2 text-[#111518] text-sm font-normal leading-normal">{loan.loanNumber || `Loan ${loan.id.slice(-6)}`}</td>
+                    <td className="px-4 py-2 text-[#637888] text-sm font-normal leading-normal">{loan.property.name}</td>
+                    <td className="px-4 py-2 text-[#637888] text-sm font-normal leading-normal">{loan.lender.name}</td>
+                    <td className="px-4 py-2 text-right text-[#637888] text-sm font-normal leading-normal">{formatAsM(loan.currentBalance)}</td>
+                    <td className="px-4 py-2 text-right text-[#637888] text-sm font-normal leading-normal">{formatPercent(loan.interestRate)}</td>
+                    <td className="px-4 py-2 text-[#637888] text-sm font-normal leading-normal">
                       {new Date(loan.maturityDate).toLocaleDateString()}
-                  </td>
-                  <td className="h-[72px] px-4 py-2 w-60 text-sm font-normal leading-normal">
-                      <button
-                      className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-8 px-4 bg-[#f0f3f4] text-[#111518] text-sm font-medium leading-normal w-full"
-                      >
-                      <span className="truncate">{loan.currentBalance > 0 ? 'Active' : 'Closed'}</span>
-                      </button>
-                  </td>
+                    </td>
                   </tr>
-              ))}
+                ))}
               </tbody>
-          </table>
+            </table>
           </div>
       </div>
     </div>

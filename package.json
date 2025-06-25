@@ -12,8 +12,13 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "test": "npm run test --workspaces --if-present",
     "db:push": "dotenv -- pnpm --filter db exec prisma db push --skip-generate",
-    "db:generate": "dotenv -- pnpm --filter db exec prisma generate",
-    "db:studio": "dotenv -- pnpm --filter db exec prisma studio"
+    "db:generate": "pnpm --filter db exec prisma generate",
+    "db:studio": "dotenv -- pnpm --filter db exec prisma studio",
+    "build:web": "pnpm --filter web build",
+    "build:api": "pnpm --filter api build",
+    "start:web": "pnpm --filter web start",
+    "start:api": "pnpm --filter api start:prod",
+    "deploy:prepare": "pnpm db:generate && pnpm build"
   },
   "devDependencies": {
     "dotenv-cli": "^7.4.2",

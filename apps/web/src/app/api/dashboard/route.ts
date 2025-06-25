@@ -77,6 +77,17 @@ export async function GET(req: Request) {
       return acc;
     }, {} as Record<string, number>);
 
+    // Check if user has any data (portfolios, properties, or loans)
+    const portfolios = await db.portfolio.findMany({
+      where: { organizationId: userWithOrg.organizationId },
+    });
+
+    const properties = await db.property.findMany({
+      where: { organizationId: userWithOrg.organizationId },
+    });
+
+    const hasData = portfolios.length > 0 || properties.length > 0 || loans.length > 0;
+
     return NextResponse.json({
       totalDebt,
       averageInterestRate,
@@ -85,6 +96,7 @@ export async function GET(req: Request) {
       debtByLender,
       maturitySchedule,
       loans,
+      hasData,
     });
   } catch (error) {
     console.error('Error fetching dashboard data:', error);
