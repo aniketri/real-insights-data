@@ -3,7 +3,22 @@ services:
     name: real-insights-api
     env: node
     plan: starter
-    buildCommand: npm install -g pnpm@9.6.0 && pnpm install --frozen-lockfile && pnpm db:generate && pnpm --filter @repo/db build && pnpm --filter api build
+    buildCommand: |
+      npm install -g pnpm@9.6.0 && 
+      pnpm install --frozen-lockfile && 
+      echo "Generating Prisma client globally..." && 
+      pnpm db:generate && 
+      echo "Building db package..." && 
+      pnpm --filter @repo/db build && 
+      echo "Generating Prisma client for API..." && 
+      cd apps/api && pnpm exec prisma generate --schema=../../packages/db/schema.prisma && cd ../.. &&
+      echo "Building API..." && 
+      pnpm --filter api build && 
+      echo "Checking generated files..." && 
+      ls -la packages/db/dist/ && 
+      ls -la apps/api/dist/ &&
+      echo "Checking node_modules/.prisma..." &&
+      ls -la node_modules/.prisma/ || echo "No .prisma directory found"
     startCommand: cd apps/api && pnpm start:prod
     envVars:
       - key: NODE_ENV

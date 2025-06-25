@@ -1,12 +1,40 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
-import db from '@repo/db';
+import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+
+// Try importing from @repo/db first, fallback to direct PrismaClient import
+let prismaClient: any;
+try {
+  const db = require('@repo/db');
+  prismaClient = db.default || db;
+} catch (error) {
+  console.log('Failed to import from @repo/db, falling back to direct PrismaClient import');
+  const { PrismaClient } = require('@prisma/client');
+  prismaClient = new PrismaClient();
+}
 
 @Injectable()
 export class PrismaService implements OnModuleInit {
-  private readonly prisma = db;
+  private readonly logger = new Logger(PrismaService.name);
+  private readonly prisma = prismaClient;
   
   async onModuleInit() {
-    await this.prisma.$connect();
+    try {
+      this.logger.log('Initializing Prisma connection...');
+      
+      // Check if prisma client is properly loaded
+      if (!this.prisma) {
+        throw new Error('Prisma client is not initialized');
+      }
+      
+      if (typeof this.prisma.$connect !== 'function') {
+        throw new Error('Prisma $connect method is not available');
+      }
+      
+      await this.prisma.$connect();
+      this.logger.log('Prisma connection established successfully');
+    } catch (error) {
+      this.logger.error('Failed to connect to Prisma:', error);
+      throw error;
+    }
   }
   
   get user() { return (this.prisma as any).user; }
