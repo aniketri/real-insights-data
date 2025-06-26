@@ -1,6 +1,6 @@
 {
-  "buildCommand": "cd ../.. && npm install -g pnpm@9.6.0 && pnpm install --frozen-lockfile && pnpm db:generate && pnpm --filter @repo/db build && pnpm --filter web build",
-  "installCommand": "cd ../.. && npm install -g pnpm@9.6.0 && pnpm install --frozen-lockfile",
+  "buildCommand": "cd ../.. && pnpm install --frozen-lockfile && pnpm db:generate && pnpm --filter @repo/db build && pnpm --filter web build",
+  "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
   "framework": "nextjs",
   "regions": ["iad1"],
   "functions": {
@@ -10,7 +10,7 @@
   },
   "build": {
     "env": {
-      "NEXT_PUBLIC_API_URL": "https://your-api.onrender.com"
+      "NEXT_PUBLIC_API_URL": "https://real-insights-api.onrender.com"
     }
   }
 } 

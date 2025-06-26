@@ -44,15 +44,14 @@ jobs:
 
       - name: Deploy to Vercel
         if: steps.check-vercel.outputs.configured == 'true'
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
-          working-directory: ./apps/web
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          scope: ${{ secrets.VERCEL_ORG_ID }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          npm install -g pnpm@9.6.0
+          npm install -g vercel@latest
+          cd apps/web
+          vercel --token=${{ secrets.VERCEL_TOKEN }} --prod --yes
 
   deploy-backend:
     runs-on: ubuntu-latest
