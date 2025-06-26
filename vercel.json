@@ -11,9 +11,7 @@
   "build": {
     "env": {
       "NEXT_PUBLIC_API_URL": "https://real-insights-api.onrender.com",
-      "DATABASE_URL": "@DATABASE_URL",
-      "NEXTAUTH_SECRET": "@NEXTAUTH_SECRET",
-      "NEXTAUTH_URL": "@NEXTAUTH_URL"
+      "DATABASE_URL": "mongodb://localhost:27017/dummy-build-db"
     }
   }
 } 
