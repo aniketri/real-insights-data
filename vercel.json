@@ -1,0 +1,16 @@
+{
+  "buildCommand": "pnpm install --frozen-lockfile && pnpm db:generate && pnpm --filter @repo/db build && pnpm --filter web build",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "functions": {
+    "apps/web/src/app/api/**": {
+      "maxDuration": 30
+    }
+  },
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_API_URL": "https://real-insights-api.onrender.com"
+    }
+  }
+} 
