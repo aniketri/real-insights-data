@@ -11,7 +11,11 @@
   "build": {
     "env": {
       "NEXT_PUBLIC_API_URL": "https://real-insights-api.onrender.com",
-      "DATABASE_URL": "mongodb://localhost:27017/dummy-build-db"
+      "DATABASE_URL": "mongodb+srv://aniket:dKsB2Bie2dhVftCw@realinsightsdata.hqlgwsg.mongodb.net/real-insights?retryWrites=true&w=majority",
+      "NEXTAUTH_SECRET": "B5yBVt0vSGWtLvuMw5rnp3q7W9wxqyj76DJUr8URDog=",
+      "NEXTAUTH_URL": "https://dummy-url-for-build.com",
+      "NODE_ENV": "production",
+      "SKIP_ENV_VALIDATION": "true"
     }
   }
 } 
