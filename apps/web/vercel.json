@@ -1,0 +1,16 @@
+{
+  "buildCommand": "cd ../.. && npm install -g pnpm@9.6.0 && pnpm install --frozen-lockfile && pnpm db:generate && pnpm --filter @repo/db build && pnpm --filter web build",
+  "installCommand": "cd ../.. && npm install -g pnpm@9.6.0 && pnpm install --frozen-lockfile",
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "functions": {
+    "src/app/api/**": {
+      "maxDuration": 30
+    }
+  },
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_API_URL": "https://your-api.onrender.com"
+    }
+  }
+} 
