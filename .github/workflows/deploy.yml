@@ -50,6 +50,7 @@ jobs:
         run: |
           npm install -g pnpm@9.6.0
           npm install -g vercel@latest
+          cd apps/web
           vercel --token=${{ secrets.VERCEL_TOKEN }} --prod --yes
 
   deploy-backend:
