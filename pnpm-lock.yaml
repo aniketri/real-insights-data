@@ -206,13 +206,16 @@ importers:
       '@prisma/client':
         specifier: ^5.22.0
         version: 5.22.0(prisma@5.22.0)
-      prisma:
-        specifier: ^5.22.0
-        version: 5.22.0
-    devDependencies:
       '@types/node':
         specifier: ^20.14.10
         version: 20.19.1
+      prisma:
+        specifier: ^5.22.0
+        version: 5.22.0
+      typescript:
+        specifier: ^5.5.4
+        version: 5.8.3
+    devDependencies:
       dotenv-cli:
         specifier: ^7.4.2
         version: 7.4.4
@@ -222,9 +225,6 @@ importers:
       tsx:
         specifier: ^4.16.2
         version: 4.20.3
-      typescript:
-        specifier: ^5.5.4
-        version: 5.8.3
 
 packages:
 
