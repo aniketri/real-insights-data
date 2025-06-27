@@ -1,7 +1,8 @@
 {
-  "buildCommand": "cd ../.. && pnpm install --frozen-lockfile --no-optional && cd packages/db && pnpm exec prisma generate --schema=schema.prisma && cd ../../apps/web && pnpm build",
-  "installCommand": "cd ../.. && pnpm install --frozen-lockfile --no-optional",
   "framework": "nextjs",
+  "buildCommand": "cd ../.. && pnpm install --filter web... && cd packages/db && pnpm exec prisma generate --schema=schema.prisma && cd ../../apps/web && pnpm run build",
+  "installCommand": "cd ../.. && pnpm install --filter web...",
+  "outputDirectory": ".next",
   "regions": ["iad1"],
   "functions": {
     "src/app/api/**": {
