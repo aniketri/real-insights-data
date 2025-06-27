@@ -17,5 +17,6 @@ cd ../..
 echo "🏗️ Building web app..."
 cd apps/web
 pnpm run build
+cd ../..
 
 echo "✅ Build completed successfully!" 

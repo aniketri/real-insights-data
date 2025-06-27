@@ -1,7 +1,7 @@
 {
   "framework": "nextjs",
-  "buildCommand": "cd ../.. && bash scripts/vercel-build.sh",
-  "outputDirectory": "apps/web/.next",
+  "buildCommand": "cd ../.. && pnpm install --frozen-lockfile && cd packages/db && pnpm exec prisma generate --schema=schema.prisma && cd ../../apps/web && pnpm exec next build",
+  "outputDirectory": ".next",
   "regions": ["iad1"],
   "functions": {
     "src/app/api/**": {
