@@ -1,6 +1,6 @@
 {
   "framework": "nextjs",
-  "buildCommand": "cd ../.. && pnpm install --filter web... && cd packages/db && pnpm exec prisma generate --schema=schema.prisma && cd ../../apps/web && pnpm run build",
+  "buildCommand": "cd ../.. && pnpm install --filter web... && cd packages/db && pnpm run generate && cd ../../apps/web && pnpm run build",
   "installCommand": "cd ../.. && pnpm install --filter web...",
   "outputDirectory": ".next",
   "regions": ["iad1"],
