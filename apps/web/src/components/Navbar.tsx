@@ -29,7 +29,7 @@ export default function Navbar({ session }: { session: Session }) {
           <Link className="text-[#111518] text-sm font-medium leading-normal" href="/dashboard">Dashboard</Link>
           <Link className="text-[#111518] text-sm font-medium leading-normal" href="/loans">Portfolio</Link>
           <Link className="text-[#111518] text-sm font-medium leading-normal" href="#">Analytics</Link>
-          <Link className="text-[#111518] text-sm font-medium leading-normal" href="#">Reports</Link>
+          <Link className="text-[#111518] text-sm font-medium leading-normal" href="/reports">Reports</Link>
           <Link className="text-[#111518] text-sm font-medium leading-normal" href="#">Market Data</Link>
           <Link className="text-[#111518] text-sm font-medium leading-normal" href="#">Help</Link>
         </div>

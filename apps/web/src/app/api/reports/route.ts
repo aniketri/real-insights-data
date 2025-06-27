@@ -1,0 +1,169 @@
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import db from '@repo/db';
+
+export async function GET(req: Request) {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Not authorized' }, { status: 401 });
+  }
+
+  try {
+    const userWithOrg = await db.user.findUnique({
+      where: {
+        email: session.user.email,
+      },
+      include: {
+        organization: {
+          include: {
+            loans: {
+              include: {
+                lender: true,
+                fund: true,
+                property: true,
+              },
+            },
+            properties: true,
+          },
+        },
+      },
+    });
+
+    if (!userWithOrg || !userWithOrg.organization) {
+      return NextResponse.json({ error: 'User or organization not found' }, { status: 404 });
+    }
+
+    const { loans, properties } = userWithOrg.organization;
+
+    // Calculate Total Portfolio Value (sum of all property values)
+    const totalPortfolioValue = properties.reduce((acc: number, property: any) => {
+      return acc + (property.currentValue || property.purchasePrice || 0);
+    }, 0);
+
+    // Calculate Total Debt
+    const totalDebt = loans.reduce((acc: number, loan: any) => acc + loan.currentBalance, 0);
+
+    // Calculate Average DSCR (Debt Service Coverage Ratio)
+    const loansWithDSCR = loans.filter((loan: any) => loan.dscr);
+    const averageDSCR = loansWithDSCR.length > 0
+      ? loansWithDSCR.reduce((acc: number, loan: any) => acc + loan.dscr, 0) / loansWithDSCR.length
+      : 0;
+
+    // Calculate Average LTV (Loan to Value Ratio)
+    const loansWithLTV = loans.filter((loan: any) => loan.ltv);
+    const averageLTV = loansWithLTV.length > 0
+      ? loansWithLTV.reduce((acc: number, loan: any) => acc + loan.ltv, 0) / loansWithLTV.length
+      : 0;
+
+    // Calculate Total NOI (Net Operating Income)
+    const totalNOI = properties.reduce((acc: number, property: any) => {
+      return acc + (property.annualNOI || 0);
+    }, 0);
+
+    // Calculate Average Occupancy Rate
+    const propertiesWithOccupancy = properties.filter((property: any) => property.occupancyRate);
+    const averageOccupancyRate = propertiesWithOccupancy.length > 0
+      ? propertiesWithOccupancy.reduce((acc: number, property: any) => acc + property.occupancyRate, 0) / propertiesWithOccupancy.length
+      : 0;
+
+    // Generate monthly data for the last 12 months (mock trend data)
+    const currentDate = new Date();
+    const portfolioValueOverTime = [];
+    const dscrTrend = [];
+
+    for (let i = 11; i >= 0; i--) {
+      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+      const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+      
+      // Simulate some variance in portfolio value (±5% from current)
+      const variance = (Math.random() - 0.5) * 0.1; // ±5%
+      const monthValue = totalPortfolioValue * (1 + variance);
+      
+      portfolioValueOverTime.push({
+        month: monthName,
+        value: monthValue,
+      });
+
+      // Simulate DSCR trend with some variance
+      const dscrVariance = (Math.random() - 0.5) * 0.2; // ±10%
+      const monthDSCR = averageDSCR * (1 + dscrVariance);
+      
+      dscrTrend.push({
+        month: monthName,
+        value: Math.max(0.8, monthDSCR), // Keep DSCR reasonable
+      });
+    }
+
+    // Calculate year-over-year change (mock 5% growth)
+    const portfolioGrowth = 0.05;
+    const dscrChange = -0.02; // 2% decline
+
+    return NextResponse.json({
+      metrics: {
+        totalPortfolioValue,
+        totalDebt,
+        averageDSCR,
+        averageLTV,
+        totalNOI,
+        averageOccupancyRate,
+      },
+      trends: {
+        portfolioValueOverTime,
+        dscrTrend,
+        portfolioGrowth,
+        dscrChange,
+      },
+      summary: {
+        totalLoans: loans.length,
+        totalProperties: properties.length,
+        hasData: loans.length > 0 || properties.length > 0,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching reports data:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function POST(req: Request) {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Not authorized' }, { status: 401 });
+  }
+
+  try {
+    const body = await req.json();
+    const { name, reportType, parameters, metrics, visualizations } = body;
+
+    const user = await db.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Save the report configuration to the database
+    const report = await db.report.create({
+      data: {
+        name,
+        reportType: reportType.toUpperCase(),
+        parameters: {
+          metrics,
+          visualizations,
+          dateRange: parameters.dateRange,
+        },
+        createdById: user.id,
+        organizationId: user.organizationId,
+      },
+    });
+
+    return NextResponse.json({ success: true, reportId: report.id });
+  } catch (error) {
+    console.error('Error creating report:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+} 
