@@ -1,6 +1,6 @@
 {
-  "framework": "nextjs",
-  "buildCommand": "cd ../.. && pnpm install --frozen-lockfile && cd packages/db && pnpm exec prisma generate --schema=schema.prisma && cd ../../apps/web && NODE_ENV=production pnpm run build",
+  "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
+  "buildCommand": "cd ../.. && cd packages/db && pnpm exec prisma generate --schema=schema.prisma && cd ../../apps/web && pnpm install && NODE_ENV=production pnpm run build",
   "outputDirectory": ".next",
   "regions": ["iad1"],
   "functions": {
