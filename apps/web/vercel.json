@@ -1,5 +1,7 @@
 {
   "framework": "nextjs",
+  "buildCommand": "cd ../.. && bash scripts/vercel-build.sh",
+  "outputDirectory": "apps/web/.next",
   "regions": ["iad1"],
   "functions": {
     "src/app/api/**": {
