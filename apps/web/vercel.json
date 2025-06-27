@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd ../.. && pnpm install --frozen-lockfile && cd packages/db && pnpm exec prisma generate && cd ../apps/web && pnpm build",
+  "buildCommand": "cd ../.. && pnpm install --frozen-lockfile && cd packages/db && pnpm exec prisma generate && cd ../../apps/web && pnpm build",
   "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
   "framework": "nextjs",
   "regions": ["iad1"],
