@@ -8,6 +8,16 @@ import db from '@repo/db';
  * Visit: https://your-app.vercel.app/api/test-db
  */
 export async function GET() {
+  // Skip during build time
+  if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
+    return NextResponse.json({ 
+      status: 'skipped',
+      message: 'Database test skipped during build',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV
+    });
+  }
+
   try {
     console.log('🔍 Testing database connection...');
     

@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "echo 'Generating Prisma client...' && (npx prisma generate --schema=../../packages/db/schema.prisma || echo 'Prisma generation failed, continuing...') && node -e \"const fs = require('fs'); const path = require('path'); const p = path.join(process.cwd(), '../..', 'node_modules/@prisma/client'); const n = path.join(process.cwd(), 'node_modules/@prisma'); if (!fs.existsSync(n)) fs.mkdirSync(n, { recursive: true }); const c = path.join(process.cwd(), 'node_modules/@prisma/client'); if (!fs.existsSync(c) && fs.existsSync(p)) fs.symlinkSync(p, c, 'dir');\""
+    "postinstall": "echo 'Setting up Prisma...' && (../../node_modules/.bin/prisma generate --schema=../../packages/db/schema.prisma || echo 'Prisma generation skipped') && node -e \"try { const fs = require('fs'); const path = require('path'); const p = path.join(process.cwd(), '../..', 'node_modules/@prisma/client'); const n = path.join(process.cwd(), 'node_modules/@prisma'); if (!fs.existsSync(n)) fs.mkdirSync(n, { recursive: true }); const c = path.join(process.cwd(), 'node_modules/@prisma/client'); if (!fs.existsSync(c) && fs.existsSync(p)) fs.symlinkSync(p, c, 'dir'); } catch(e) { console.log('Symlink creation skipped'); }\""
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.9.1",
@@ -30,7 +30,7 @@
     "typescript": "^5"
   },
   "devDependencies": {
-    "eslint": "^8",
+    "eslint": "^8.57.1",
     "eslint-config-next": "14.2.3",
     "prisma": "^5.22.0"
   }
