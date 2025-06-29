@@ -39,6 +39,9 @@ model Organization {
   reports     Report[]
   documents   Document[]
 
+  // Performance indexes
+  @@index([subscriptionStatus])
+  @@index([createdAt])
   @@map("organizations")
 }
 
@@ -79,6 +82,10 @@ model User {
   aiQueries      AIQuery[]
   createdReports Report[]
 
+  // Critical performance indexes (email already has @unique, so no separate index needed)
+  @@index([organizationId])
+  @@index([organizationId, isActive])
+  @@index([lastLoginAt])
   @@map("users")
 }
 
@@ -102,6 +109,9 @@ model Portfolio {
   properties Property[]
   loans      Loan[]
 
+  // Performance indexes
+  @@index([organizationId])
+  @@index([organizationId, createdAt])
   @@map("portfolios")
 }
 
@@ -150,6 +160,11 @@ model Property {
   // Relations
   loans Loan[]
 
+  // Performance indexes
+  @@index([organizationId])
+  @@index([organizationId, propertyType])
+  @@index([portfolioId])
+  @@index([city, state])
   @@map("properties")
 }
 
@@ -222,6 +237,19 @@ model Loan {
   documents           Document[]
   alerts              Alert[]
 
+  // Critical performance indexes for 10K users
+  @@index([organizationId])
+  @@index([organizationId, loanStatus])
+  @@index([organizationId, maturityDate])
+  @@index([propertyId])
+  @@index([lenderId])
+  @@index([fundId])
+  @@index([portfolioId])
+  @@index([loanStatus])
+  @@index([maturityDate])
+  @@index([currentBalance])
+  @@index([interestRate])
+  @@index([createdAt])
   @@map("loans")
 }
 

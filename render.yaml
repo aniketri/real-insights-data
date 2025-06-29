@@ -2,7 +2,8 @@ services:
   - type: web
     name: real-insights-api
     env: node
-    plan: starter
+    plan: standard
+    region: oregon
     buildCommand: |
       npm install -g pnpm@9.6.0 && 
       pnpm install --frozen-lockfile && 
@@ -20,6 +21,10 @@ services:
       echo "Checking node_modules/.prisma..." &&
       ls -la node_modules/.prisma/ || echo "No .prisma directory found"
     startCommand: cd apps/api && pnpm start:prod
+    
+    autoDeploy: true
+    numInstances: 3
+    
     envVars:
       - key: NODE_ENV
         value: production
@@ -41,9 +46,33 @@ services:
         sync: false
       - key: MICROSOFT_CLIENT_SECRET
         sync: false
-    healthCheckPath: /
+      - key: FRONTEND_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: NODE_OPTIONS
+        value: "--max-old-space-size=2048"
+      - key: DATABASE_POOL_SIZE
+        value: "20"
+      - key: DATABASE_CONNECTION_LIMIT
+        value: "100"
     
+    healthCheckPath: /api/v1/health
+    
+    disk:
+      name: real-insights-api-disk
+      size: 20GB
+      
 databases:
   - name: real-insights-db
     databaseName: real_insights
-    plan: starter 
+    plan: standard
+    region: oregon
+    
+    ipAllowList: []
+    
+# Optional: Redis for caching (recommended for 10K users)
+# - type: redis
+#   name: real-insights-redis
+#   plan: starter
+#   region: oregon 
