@@ -21,6 +21,9 @@ importers:
       prettier:
         specifier: ^3.2.5
         version: 3.5.3
+      prisma:
+        specifier: ^5.22.0
+        version: 5.22.0
       turbo:
         specifier: ^2.0.6
         version: 2.5.4
@@ -212,6 +215,9 @@ importers:
       eslint-config-next:
         specifier: 14.2.3
         version: 14.2.3(eslint@8.57.1)(typescript@5.8.3)
+      prisma:
+        specifier: ^5.22.0
+        version: 5.22.0
 
   packages/db:
     dependencies:
