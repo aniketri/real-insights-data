@@ -1,5 +1,6 @@
 import NextAuth from 'next-auth';
-import { authOptions } from '@/lib/auth';
+// EMERGENCY: Use simple auth to bypass database issues during deployment
+import { authOptions } from '@/lib/auth-simple';
 
 const handler = NextAuth(authOptions);
 
