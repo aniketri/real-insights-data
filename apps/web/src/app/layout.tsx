@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Public_Sans } from "next/font/google";
 import "./globals.css";
 import Provider from "./Provider";
+import KeepAlive from "@/components/KeepAlive";
 
 const publicSans = Public_Sans({
   subsets: ["latin"],
@@ -22,6 +23,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${publicSans.variable} font-sans`}>
         <Provider>{children}</Provider>
+        <KeepAlive />
       </body>
     </html>
   );
