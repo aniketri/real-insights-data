@@ -7,6 +7,15 @@ declare global {
 
 // Enhanced Prisma client configuration for production performance
 const createPrismaClient = () => {
+  // Skip Prisma client creation during build time if DATABASE_URL is not available
+  if (!process.env.DATABASE_URL && process.env.NODE_ENV !== 'development') {
+    console.warn('⚠️ DATABASE_URL not found, creating minimal Prisma client for build');
+    return new PrismaClient({
+      log: ['error'],
+      errorFormat: 'minimal',
+    });
+  }
+
   return new PrismaClient({
     // Enable query logging in development
     log: process.env.NODE_ENV === 'development' 
@@ -77,8 +86,12 @@ process.on('SIGINT', disconnect);
 process.on('SIGTERM', disconnect);
 process.on('beforeExit', disconnect);
 
-// Connect on module load
-connectWithRetry().catch(console.error);
+// Connect on module load only if DATABASE_URL is available
+if (process.env.DATABASE_URL) {
+  connectWithRetry().catch(console.error);
+} else if (process.env.NODE_ENV !== 'development') {
+  console.warn('⚠️ Skipping database connection during build (DATABASE_URL not available)');
+}
 
 // Enhanced Prisma client with additional utilities
 const enhancedPrisma = Object.assign(prisma, {

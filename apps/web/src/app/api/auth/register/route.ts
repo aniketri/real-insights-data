@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@repo/db';
+import { checkDatabaseAvailable } from '@/lib/api-utils';
 import bcrypt from 'bcryptjs';
 import { resend } from '@/lib/mailer';
 import { OtpEmail } from '@/components/emails/otp-email';
 
 export async function POST(req: NextRequest) {
+  // Check database availability during build
+  const dbCheck = checkDatabaseAvailable();
+  if (dbCheck) return dbCheck;
+  
   try {
     // Skip execution during build time
     if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {

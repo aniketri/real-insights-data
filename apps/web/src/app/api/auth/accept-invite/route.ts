@@ -3,6 +3,10 @@ import prisma from '@repo/db';
 import bcrypt from 'bcryptjs';
 
 export async function POST(req: NextRequest) {
+  // Skip during build time if DATABASE_URL is not available
+  if (!process.env.DATABASE_URL) {
+    return NextResponse.json({ message: 'Service temporarily unavailable' }, { status: 503 });
+  }
   try {
     const { token, email, firstName, lastName, password } = await req.json();
 

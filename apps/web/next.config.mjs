@@ -44,13 +44,15 @@ const nextConfig = {
   env: {
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
-    DATABASE_URL: process.env.DATABASE_URL,
+    // DATABASE_URL: Removed from here to prevent build-time connection
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
     MICROSOFT_CLIENT_ID: process.env.MICROSOFT_CLIENT_ID,
     MICROSOFT_CLIENT_SECRET: process.env.MICROSOFT_CLIENT_SECRET,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     API_URL: process.env.API_URL,
+    // Build-time flag to skip database operations
+    SKIP_DB_DURING_BUILD: process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL ? 'true' : 'false',
   },
   publicRuntimeConfig: {
     API_URL: process.env.NEXT_PUBLIC_API_URL || process.env.API_URL,
