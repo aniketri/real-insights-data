@@ -1,4 +1,6 @@
 {
+  "buildCommand": "cd ../.. && pnpm install --no-frozen-lockfile && pnpm db:generate && pnpm build:web",
+  "installCommand": "cd ../.. && pnpm install --no-frozen-lockfile",
   "functions": {
     "apps/web/src/app/api/**/*.ts": {
       "includeFiles": "node_modules/.prisma/client/**"
