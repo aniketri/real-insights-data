@@ -1,6 +1,5 @@
 import NextAuth from 'next-auth';
-// TEMPORARY: Use debug config to isolate issue
-import { authOptions } from '@/lib/auth-debug';
+import { authOptions } from '@/lib/auth';
 
 const handler = NextAuth(authOptions);
 
