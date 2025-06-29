@@ -1,0 +1,20 @@
+{
+  "functions": {
+    "apps/web/src/app/api/**/*.ts": {
+      "includeFiles": "node_modules/.prisma/client/**"
+    }
+  },
+  "builds": [
+    {
+      "src": "apps/web/package.json",
+      "use": "@vercel/next",
+      "config": {
+        "includeFiles": [
+          "node_modules/.prisma/client/**",
+          "node_modules/@prisma/client/**",
+          "packages/db/node_modules/.prisma/client/**"
+        ]
+      }
+    }
+  ]
+} 
