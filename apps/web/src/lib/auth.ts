@@ -68,12 +68,16 @@ export const authOptions: AuthOptions = {
   },
   callbacks: {
     async signIn({ user, account, profile }) {
-      console.log('SignIn callback triggered:', { provider: account?.provider, email: user.email });
+      console.log('🔐 SignIn callback triggered:', { 
+        provider: account?.provider, 
+        email: user.email,
+        hasProfile: !!profile 
+      });
       
       // Handle OAuth providers manually
       if (account?.provider !== 'credentials' && user.email) {
         try {
-          console.log('Processing OAuth user:', user.email);
+          console.log('🔍 Processing OAuth user:', user.email);
           
           // Check if user already exists
           let existingUser = await prisma.user.findUnique({
@@ -142,9 +146,15 @@ export const authOptions: AuthOptions = {
             (user as any).needsProfileCompletion = true;
           }
           
-          console.log('OAuth sign-in successful for:', user.email);
+          console.log('✅ OAuth sign-in successful for:', user.email);
         } catch (error) {
-          console.error('Error in signIn callback:', error);
+          console.error('❌ Error in signIn callback:', error);
+          console.error('❌ Error details:', {
+            message: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined,
+            provider: account?.provider,
+            email: user.email
+          });
           return false;
         }
       }
