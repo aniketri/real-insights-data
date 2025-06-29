@@ -18,8 +18,14 @@ const nextConfig = {
   },
   experimental: {
     outputFileTracingIncludes: {
-      '/*': ['./node_modules/.prisma/client/**/*'],
+      '/*': [
+        './node_modules/.prisma/client/**/*',
+        './node_modules/@prisma/client/**/*',
+        './node_modules/@prisma/engines/**/*',
+        './packages/db/node_modules/.prisma/client/**/*'
+      ],
     },
+    serverComponentsExternalPackages: ['@prisma/client', 'prisma'],
     ...(process.env.NODE_ENV === 'production' && {
       outputFileTracingExcludes: {
         '*': [
