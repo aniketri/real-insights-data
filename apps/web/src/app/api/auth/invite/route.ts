@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
     await prisma.user.create({
       data: {
         email,
-        name: email.split('@')[0], // Temporary name
+        name: email.split('@')[0], // Default name from email (user can update later)
         organizationId: adminUser.organizationId,
         role: role as any,
         permissions: finalPermissions,
