@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import prisma from '@repo/db';
 import { authOptions } from '@/lib/auth';
-import db from '@repo/db';
+import { checkDatabaseAvailable } from '@/lib/api-utils';
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -11,7 +12,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    const userWithOrg = await db.user.findUnique({
+    const userWithOrg = await prisma.user.findUnique({
       where: {
         email: session.user.email,
       },
@@ -138,7 +139,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { name, reportType, parameters, metrics, visualizations } = body;
 
-    const user = await db.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { email: session.user.email },
     });
 
@@ -147,7 +148,7 @@ export async function POST(req: Request) {
     }
 
     // Save the report configuration to the database
-    const report = await db.report.create({
+    const report = await prisma.report.create({
       data: {
         name,
         reportType: reportType.toUpperCase(),

@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@repo/db';
-import { checkDatabaseAvailable } from '@/lib/api-utils';
+import db from '@repo/db';
 
 // In-memory cache for dashboard data
 const dashboardCache = new Map<string, { data: any; timestamp: number }>();
@@ -39,7 +38,7 @@ export async function GET(req: Request) {
 
   try {
     // Step 1: Get user and organization ID efficiently (no nested includes)
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { email: session.user.email },
       select: { 
         id: true, 
@@ -84,7 +83,7 @@ export async function GET(req: Request) {
     // Step 5: Execute optimized queries in parallel
     const [loans, portfolioCount, propertyCount] = await Promise.all([
       // Get loans with only required fields to minimize data transfer
-      prisma.loan.findMany({
+      db.loan.findMany({
         where: loanFilters,
         select: {
           id: true,
@@ -126,8 +125,8 @@ export async function GET(req: Request) {
       }),
 
       // Get counts efficiently
-      prisma.portfolio.count({ where: { organizationId: user.organizationId } }),
-      prisma.property.count({ where: { organizationId: user.organizationId } })
+      db.portfolio.count({ where: { organizationId: user.organizationId } }),
+      db.property.count({ where: { organizationId: user.organizationId } })
     ]);
 
     // Step 6: Perform calculations efficiently in JavaScript

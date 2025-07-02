@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import db from '@repo/db';
-import type { Loan, Lender } from '@repo/db';
+import prisma from '@repo/db';
+import { checkDatabaseAvailable } from '@/lib/api-utils';
 
 export async function GET() {
+  // Check database availability during build
+  const dbCheck = checkDatabaseAvailable();
+  if (dbCheck) return dbCheck;
+
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.email) {
@@ -12,7 +16,12 @@ export async function GET() {
   }
 
   try {
-    const user = await db.user.findUnique({
+    // Skip execution during build time
+    if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
+      return NextResponse.json({ message: 'Service temporarily unavailable' }, { status: 503 });
+    }
+
+    const user = await prisma.user.findUnique({
       where: {
         email: session.user.email,
       },
