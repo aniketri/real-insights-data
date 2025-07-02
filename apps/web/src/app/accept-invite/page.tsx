@@ -1,6 +1,6 @@
 'use client';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 
 function AcceptInviteForm() {
@@ -21,17 +21,7 @@ function AcceptInviteForm() {
     confirmPassword: '',
   });
 
-  useEffect(() => {
-    if (!token || !email) {
-      setError('Invalid invitation link.');
-      return;
-    }
-
-    // Validate invitation token
-    validateInvite();
-  }, [token, email]);
-
-  const validateInvite = async () => {
+  const validateInvite = useCallback(async () => {
     try {
       const response = await fetch('/api/auth/validate-invite', {
         method: 'POST',
@@ -49,7 +39,17 @@ function AcceptInviteForm() {
     } catch (err) {
       setError('Failed to validate invitation.');
     }
-  };
+  }, [token, email]);
+
+  useEffect(() => {
+    if (!token || !email) {
+      setError('Invalid invitation link.');
+      return;
+    }
+
+    // Validate invitation token
+    validateInvite();
+  }, [token, email, validateInvite]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
