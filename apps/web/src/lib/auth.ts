@@ -32,27 +32,21 @@ export const authOptions: AuthOptions = {
         }
 
         try {
-          console.log('🔑 Attempting credentials authentication for:', credentials.email);
-          
           await prisma.$connect();
-          console.log('✅ Database connection established for credentials auth');
 
           const user = await prisma.user.findUnique({
             where: { email: credentials.email },
           });
 
           if (!user) {
-            console.log('❌ User not found:', credentials.email);
             return null;
           }
 
           if (!user.passwordHash) {
-            console.log('❌ User has no password hash - likely OAuth-only user');
             return null;
           }
 
           if (!user.emailVerified) {
-            console.log('❌ Email not verified for user:', credentials.email);
             return null;
           }
 
@@ -62,7 +56,6 @@ export const authOptions: AuthOptions = {
           );
 
           if (!isPasswordValid) {
-            console.log('❌ Invalid password for user:', credentials.email);
             return null;
           }
 
@@ -72,7 +65,6 @@ export const authOptions: AuthOptions = {
             data: { lastLoginAt: new Date() },
           });
 
-          console.log('✅ Credentials authentication successful for:', user.email);
           return {
             id: user.id,
             email: user.email,
@@ -91,18 +83,10 @@ export const authOptions: AuthOptions = {
   },
   callbacks: {
     async signIn({ user, account, profile }) {
-      console.log('🔐 SignIn callback triggered:', { 
-        provider: account?.provider, 
-        email: user.email 
-      });
-      
       // For OAuth providers, ensure user has organization and proper role setup
       if (account?.provider !== 'credentials' && user.email) {
         try {
-          console.log('🔍 Processing OAuth user:', user.email);
-          
           await prisma.$connect();
-          console.log('✅ Database connection established');
           
           // Check if user already exists (adapter might have created basic user)
           let existingUser = await prisma.user.findUnique({
