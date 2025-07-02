@@ -79,6 +79,20 @@ export const authOptions: AuthOptions = {
         try {
           console.log('🔍 Processing OAuth user:', user.email);
           
+          // Test database connectivity first
+          try {
+            await prisma.$connect();
+            console.log('✅ Database connection established');
+          } catch (dbError) {
+            console.error('❌ Database connection failed:', dbError);
+            // If database is unavailable, fall back to simple JWT auth
+            console.log('🔄 Falling back to simple JWT auth');
+            user.id = user.email; // Use email as ID fallback
+            (user as any).organizationId = 'temp-org';
+            (user as any).role = 'MEMBER';
+            return true;
+          }
+          
           // Check if user already exists
           let existingUser = await prisma.user.findUnique({
             where: { email: user.email },
