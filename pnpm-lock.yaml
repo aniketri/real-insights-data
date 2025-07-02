@@ -14,6 +14,12 @@ importers:
       next-auth:
         specifier: ^4.24.11
         version: 4.24.11(next@14.2.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      prisma:
+        specifier: ^5.22.0
+        version: 5.22.0
+      turbo:
+        specifier: ^2.0.6
+        version: 2.5.4
     devDependencies:
       dotenv-cli:
         specifier: ^7.4.2
@@ -21,12 +27,6 @@ importers:
       prettier:
         specifier: ^3.2.5
         version: 3.5.3
-      prisma:
-        specifier: ^5.22.0
-        version: 5.22.0
-      turbo:
-        specifier: ^2.0.6
-        version: 2.5.4
       typescript:
         specifier: ^5.4.5
         version: 5.8.3
@@ -193,6 +193,9 @@ importers:
       postcss:
         specifier: ^8
         version: 8.5.6
+      prisma:
+        specifier: ^5.22.0
+        version: 5.22.0
       react:
         specifier: ^18
         version: 18.3.1
@@ -215,9 +218,6 @@ importers:
       eslint-config-next:
         specifier: 14.2.3
         version: 14.2.3(eslint@8.57.1)(typescript@5.8.3)
-      prisma:
-        specifier: ^5.22.0
-        version: 5.22.0
 
   packages/db:
     dependencies:
