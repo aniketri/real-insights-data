@@ -1,11 +1,12 @@
 {
-  "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
   "buildCommand": "cd ../.. && pnpm build",
   "outputDirectory": ".next",
+  "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
   "regions": ["iad1"],
   "functions": {
-    "src/app/api/**": {
+    "src/app/api/**/*.ts": {
       "maxDuration": 30,
+      "memory": 1024,
       "includeFiles": "../../node_modules/.prisma/client/**"
     }
   },
@@ -14,5 +15,6 @@
       "NODE_ENV": "production",
       "SKIP_ENV_VALIDATION": "true"
     }
-  }
+  },
+  "outputFileTracing": true
 } 
