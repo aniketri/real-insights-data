@@ -104,15 +104,17 @@ export const authOptions: AuthOptions = {
           await prisma.$connect();
           console.log('✅ Database connection established');
           
-          // The adapter creates a basic user, we need to enhance it with organization
-          const dbUser = await prisma.user.findUnique({
+          // Check if user already exists (adapter might have created basic user)
+          let existingUser = await prisma.user.findUnique({
             where: { email: user.email },
           });
 
-          if (dbUser && !dbUser.organizationId) {
-            console.log('Adding organization to OAuth user...');
+          console.log('Existing user found:', !!existingUser);
+
+          if (!existingUser) {
+            console.log('Creating new organization and user for OAuth...');
             
-            // Create organization for OAuth user
+            // Create organization first for new OAuth users
             const organization = await prisma.organization.create({
               data: {
                 name: `${user.name || user.email}'s Organization`,
@@ -121,29 +123,65 @@ export const authOptions: AuthOptions = {
               },
             });
 
-            // Update user with organization and ensure proper setup
-            await prisma.user.update({
-              where: { id: dbUser.id },
+            console.log('Organization created:', organization.id);
+
+            // Create the user with organization - OAuth users get MEMBER role and are pre-verified
+            existingUser = await prisma.user.create({
               data: {
-                organizationId: organization.id,
+                email: user.email!,
+                name: user.name || user.email!.split('@')[0],
+                image: user.image,
                 emailVerified: new Date(), // OAuth users are pre-verified (no OTP needed)
-                role: 'MEMBER', // Default role
-                permissions: ['READ_ALL'], // Basic permissions
+                organizationId: organization.id,
+                role: 'MEMBER', // Default role for new users
+                permissions: ['READ_ALL'], // Basic permissions for new users
                 isActive: true,
                 lastLoginAt: new Date(),
               },
             });
 
-            console.log('User updated with organization:', dbUser.id);
-          } else if (dbUser) {
-            // Update existing user's last login
+            console.log('User created:', existingUser.id);
+          } else if (!existingUser.organizationId) {
+            console.log('Adding organization to existing OAuth user...');
+            
+            // Existing user without organization - create one
+            const organization = await prisma.organization.create({
+              data: {
+                name: `${user.name || user.email}'s Organization`,
+                subscriptionStatus: 'TRIAL',
+                subscriptionTier: 'BASIC',
+              },
+            });
+
+            existingUser = await prisma.user.update({
+              where: { id: existingUser.id },
+              data: {
+                organizationId: organization.id,
+                emailVerified: existingUser.emailVerified || new Date(),
+                role: existingUser.role || 'MEMBER', // Ensure role is set
+                permissions: existingUser.permissions.length > 0 ? existingUser.permissions : ['READ_ALL'],
+                isActive: true,
+                lastLoginAt: new Date(),
+              },
+            });
+
+            console.log('User updated with organization:', existingUser.id);
+          } else {
+            // Update last login time for existing users
             await prisma.user.update({
-              where: { id: dbUser.id },
+              where: { id: existingUser.id },
               data: {
                 lastLoginAt: new Date(),
                 isActive: true,
               },
             });
+          }
+
+          // Update the user object with database values for JWT (existingUser is guaranteed to exist here)
+          if (existingUser) {
+            user.id = existingUser.id;
+            (user as any).organizationId = existingUser.organizationId;
+            (user as any).role = existingUser.role;
           }
           
           console.log('✅ OAuth sign-in successful for:', user.email);
