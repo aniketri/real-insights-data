@@ -55,20 +55,19 @@ export default function LoanDetailPage({ params }: { params: { loanId: string } 
       if (!session) return;
       try {
         setLoading(true);
-        // In a real app, you'd fetch loan details from an endpoint
-        // For now, we'll create some mock details based on the ID
-        // and fetch the parts that we have endpoints for.
-        const mockLoan: LoanDetails = {
-            id: params.loanId,
-            asset: { name: "Dynamic Property Name" },
-            originalLoanBalance: 500000,
-            interestRate: 4.5,
-            amortizationPeriod: 30,
-            maturityDate: new Date().toISOString(),
-            rateType: 'FIXED'
-        };
-        setLoan(mockLoan);
+        // Fetch real loan data from API
+        const response = await fetch(`${apiBaseUrl}/loans/${params.loanId}`, { 
+          headers: getHeaders() 
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch loan data');
+        }
+        
+        const loanData = await response.json();
+        setLoan(loanData);
       } catch (e) {
+        console.error('Error fetching loan data:', e);
         setError('Failed to fetch loan data.');
       } finally {
         setLoading(false);

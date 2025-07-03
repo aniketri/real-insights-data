@@ -198,7 +198,7 @@ export async function GET(req: Request) {
       largestLoan,
       totalLoans: loans.length,
       
-      // Sample loans for display (limit to prevent large payloads)
+      // Recent loans for display (limited for performance)
       loans: loans.slice(0, 50),
       
       // Data availability

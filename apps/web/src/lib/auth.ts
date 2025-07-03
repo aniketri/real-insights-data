@@ -38,15 +38,7 @@ export const authOptions: AuthOptions = {
             where: { email: credentials.email },
           });
 
-          if (!user) {
-            return null;
-          }
-
-          if (!user.passwordHash) {
-            return null;
-          }
-
-          if (!user.emailVerified) {
+          if (!user || !user.passwordHash || !user.emailVerified) {
             return null;
           }
 
@@ -72,7 +64,7 @@ export const authOptions: AuthOptions = {
             image: user.image,
           };
         } catch (error) {
-          console.error('❌ Database error in credentials auth:', error);
+          console.error('Database error in credentials auth:', error);
           return null;
         }
       },
@@ -93,11 +85,7 @@ export const authOptions: AuthOptions = {
             where: { email: user.email },
           });
 
-          console.log('Existing user found:', !!existingUser);
-
           if (!existingUser) {
-            console.log('Creating new organization and user for OAuth...');
-            
             // Create organization first for new OAuth users
             const organization = await prisma.organization.create({
               data: {
@@ -106,8 +94,6 @@ export const authOptions: AuthOptions = {
                 subscriptionTier: 'BASIC',
               },
             });
-
-            console.log('Organization created:', organization.id);
 
             // Create the user with organization - OAuth users get MEMBER role and are pre-verified
             existingUser = await prisma.user.create({
@@ -123,11 +109,7 @@ export const authOptions: AuthOptions = {
                 lastLoginAt: new Date(),
               },
             });
-
-            console.log('User created:', existingUser.id);
           } else if (!existingUser.organizationId) {
-            console.log('Adding organization to existing OAuth user...');
-            
             // Existing user without organization - create one
             const organization = await prisma.organization.create({
               data: {
@@ -148,8 +130,6 @@ export const authOptions: AuthOptions = {
                 lastLoginAt: new Date(),
               },
             });
-
-            console.log('User updated with organization:', existingUser.id);
           } else {
             // Update last login time for existing users
             await prisma.user.update({
@@ -167,10 +147,8 @@ export const authOptions: AuthOptions = {
             (user as any).organizationId = existingUser.organizationId;
             (user as any).role = existingUser.role;
           }
-          
-          console.log('✅ OAuth sign-in successful for:', user.email);
         } catch (error) {
-          console.error('❌ Error in OAuth signIn callback:', error);
+          console.error('Error in OAuth signIn callback:', error);
           // Allow sign-in to continue even if there are database issues
         }
       }
@@ -205,18 +183,6 @@ export const authOptions: AuthOptions = {
   },
   pages: {
     signIn: '/login',
-  },
-  events: {
-    async signIn({ user, account, profile, isNewUser }) {
-      console.log('🎉 User signed in:', {
-        email: user.email,
-        provider: account?.provider,
-        isNewUser,
-      });
-    },
-    async createUser({ user }) {
-      console.log('👤 New user created by adapter:', user.email);
-    },
   },
 };
 

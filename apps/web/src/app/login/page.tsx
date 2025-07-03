@@ -23,13 +23,11 @@ function LoginForm() {
   }
 
   const handleMicrosoftLogin = async () => {
-    console.log('Microsoft login clicked');
     try {
-      const result = await signIn('azure-ad', { 
+      await signIn('azure-ad', { 
         callbackUrl: '/dashboard',
         redirect: true 
       });
-      console.log('Microsoft login result:', result);
     } catch (error) {
       console.error('Microsoft login error:', error);
     }

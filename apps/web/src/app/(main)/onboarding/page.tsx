@@ -513,7 +513,7 @@ function CompleteStep({ formData }: { formData: FormData }) {
         
         <div className="p-4 bg-green-50 rounded-lg">
           <h4 className="font-medium text-green-900">Property</h4>
-          <p className="text-green-700 text-sm">{formData.propertyName || 'Sample Property'}</p>
+          <p className="text-green-700 text-sm">{formData.propertyName || 'Default Property'}</p>
         </div>
       </div>
       

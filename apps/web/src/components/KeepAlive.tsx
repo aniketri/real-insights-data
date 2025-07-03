@@ -16,8 +16,6 @@ export default function KeepAlive() {
     if (process.env.NODE_ENV !== 'production') return;
     if (process.env.NEXT_PUBLIC_ENABLE_KEEP_ALIVE !== 'true') return;
 
-    console.log('🔄 Keep-alive enabled - preventing server sleep');
-
     const keepAlive = setInterval(async () => {
       try {
         // Silent ping to health endpoint
@@ -26,20 +24,16 @@ export default function KeepAlive() {
           cache: 'no-cache',
         });
         
-        if (response.ok) {
-          console.log('✅ Keep-alive ping successful');
-        } else {
-          console.warn('⚠️ Keep-alive ping failed:', response.status);
+        if (!response.ok) {
+          console.warn('Keep-alive ping failed:', response.status);
         }
       } catch (error) {
-        // Silent fail - don't spam console in production
-        console.warn('⚠️ Keep-alive ping error:', error);
+        console.warn('Keep-alive ping error:', error);
       }
     }, 10 * 60 * 1000); // Every 10 minutes
 
     // Cleanup on unmount
     return () => {
-      console.log('🛑 Keep-alive disabled');
       clearInterval(keepAlive);
     };
   }, []);

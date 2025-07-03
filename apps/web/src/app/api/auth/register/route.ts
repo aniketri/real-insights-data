@@ -17,7 +17,6 @@ export async function POST(req: NextRequest) {
     }
     
     const { email, password } = await req.json();
-    console.log('📝 Registration attempt for:', email);
 
     if (!email || !password) {
       return NextResponse.json({ message: 'Email and password are required' }, { status: 400 });
@@ -27,12 +26,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Password must be at least 8 characters long' }, { status: 400 });
     }
 
-    // Test database connectivity
+    // Verify database connectivity
     try {
       await prisma.$connect();
-      console.log('✅ Database connection established for registration');
     } catch (dbError) {
-      console.error('❌ Database connection failed during registration:', dbError);
+      console.error('Database connection failed:', dbError);
       return NextResponse.json({ message: 'Service temporarily unavailable' }, { status: 503 });
     }
 
@@ -42,14 +40,11 @@ export async function POST(req: NextRequest) {
     });
 
     if (existingUser) {
-      console.log('❌ User already exists and is verified:', email);
       return NextResponse.json({ message: 'User already exists' }, { status: 409 });
     }
 
-    console.log('🔐 Hashing password...');
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    console.log('🏢 Creating organization...');
     // Create organization first
     const organization = await prisma.organization.create({
       data: {
@@ -57,7 +52,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log('👤 Creating/updating user...');
     // Create or update user with organization
     const user = await prisma.user.upsert({
       where: { email },
@@ -78,7 +72,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log('🔢 Generating OTP...');
     // Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expires = new Date();
@@ -98,7 +91,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log('📧 Sending OTP email...');
     // Send OTP email
     if (resend) {
       try {
@@ -108,20 +100,17 @@ export async function POST(req: NextRequest) {
           subject: 'Verify your email address - Real Insights',
           react: OtpEmail({ otp }),
         });
-        console.log('✅ OTP email sent successfully to:', email);
       } catch (emailError) {
-        console.error('❌ Failed to send OTP email:', emailError);
+        console.error('Failed to send OTP email:', emailError);
         // Continue anyway - user can use resend OTP
       }
-    } else {
-      console.log('⚠️ Resend not configured - OTP email not sent');
     }
 
     return NextResponse.json({ 
       message: 'Account created successfully. Please check your email for the verification code.' 
     }, { status: 201 });
   } catch (error) {
-    console.error('❌ Registration error:', error);
+    console.error('Registration error:', error);
     return NextResponse.json({ 
       message: 'An unexpected error occurred. Please try again.' 
     }, { status: 500 });
