@@ -54,64 +54,99 @@ export async function POST(req: NextRequest) {
     ]);
     console.log(`[${requestId}] Password hashing: ${Date.now() - stepStart}ms`);
 
-    // Perform all database operations in a single transaction for better performance
+    // Test database connectivity with a short timeout first
     stepStart = Date.now();
-    const result = await prisma.$transaction(async (tx: any) => {
-      // Check if user already exists and is verified
-      const existingUser = await tx.user.findFirst({
-        where: { email, emailVerified: { not: null } },
-      });
+    try {
+      await Promise.race([
+        prisma.$queryRaw`SELECT 1`,
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Database connection timeout')), 5000)
+        )
+      ]);
+      console.log(`[${requestId}] Database connectivity test: ${Date.now() - stepStart}ms`);
+    } catch (dbError: any) {
+      console.error(`[${requestId}] Database connection failed:`, dbError.message);
+      return NextResponse.json({ 
+        message: 'Database service temporarily unavailable. Please try again in a few moments.' 
+      }, { status: 503 });
+    }
 
-      if (existingUser) {
-        throw new Error('User already exists');
+    // Perform all database operations in a single transaction with shorter timeout
+    stepStart = Date.now();
+    let result;
+    try {
+      result = await Promise.race([
+        prisma.$transaction(async (tx: any) => {
+          // Check if user already exists and is verified
+          const existingUser = await tx.user.findFirst({
+            where: { email, emailVerified: { not: null } },
+          });
+
+          if (existingUser) {
+            throw new Error('User already exists');
+          }
+
+          // Create organization
+          const organization = await tx.organization.create({
+            data: {
+              name: `${email.split('@')[0]}'s Organization`,
+            },
+          });
+
+          // Create or update user
+          const user = await tx.user.upsert({
+            where: { email },
+            update: {
+              passwordHash: hashedPassword,
+              organizationId: organization.id,
+              emailVerified: null,
+            },
+            create: {
+              email,
+              passwordHash: hashedPassword,
+              name: email.split('@')[0],
+              organizationId: organization.id,
+              role: 'MEMBER',
+              permissions: ['READ_ALL'],
+              emailVerified: null,
+            },
+          });
+
+          // Clean up existing OTPs and create new one
+          await tx.oneTimePassword.deleteMany({
+            where: { 
+              email
+            },
+          });
+
+          // Create new OTP
+          await tx.oneTimePassword.create({
+            data: {
+              email,
+              token: otp,
+              expires,
+            },
+          });
+
+          return { user, organization };
+        }, {
+          timeout: 10000, // 10 second timeout for the transaction
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Database transaction timeout')), 12000)
+        )
+      ]);
+    } catch (transactionError: any) {
+      console.error(`[${requestId}] Database transaction failed:`, transactionError.message);
+      
+      if (transactionError.message === 'User already exists') {
+        return NextResponse.json({ message: 'User already exists' }, { status: 409 });
       }
-
-      // Create organization
-      const organization = await tx.organization.create({
-        data: {
-          name: `${email.split('@')[0]}'s Organization`,
-        },
-      });
-
-      // Create or update user
-      const user = await tx.user.upsert({
-        where: { email },
-        update: {
-          passwordHash: hashedPassword,
-          organizationId: organization.id,
-          emailVerified: null,
-        },
-        create: {
-          email,
-          passwordHash: hashedPassword,
-          name: email.split('@')[0],
-          organizationId: organization.id,
-          role: 'MEMBER',
-          permissions: ['READ_ALL'],
-          emailVerified: null,
-        },
-      });
-
-      // Clean up existing OTPs and create new one
-      await tx.oneTimePassword.deleteMany({
-        where: { 
-          email
-        },
-      });
-
-      // Create new OTP
-      await tx.oneTimePassword.create({
-        data: {
-          email,
-          token: otp,
-          expires,
-        },
-      });
-
-      return { user, organization };
-    }, {
-      timeout: 15000, // 15 second timeout for the transaction
-    });
+      
+      return NextResponse.json({ 
+        message: 'Registration temporarily unavailable. Please try again in a few moments.' 
+      }, { status: 503 });
+    }
     
     console.log(`[${requestId}] Database transaction: ${Date.now() - stepStart}ms`);
 
@@ -148,11 +183,6 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     const totalDuration = Date.now() - startTime;
     console.error(`[${requestId}] Registration error after ${totalDuration}ms:`, error);
-    
-    // Handle specific error cases
-    if (error instanceof Error && error.message === 'User already exists') {
-      return NextResponse.json({ message: 'User already exists' }, { status: 409 });
-    }
     
     return NextResponse.json({ 
       message: 'An unexpected error occurred. Please try again.',
