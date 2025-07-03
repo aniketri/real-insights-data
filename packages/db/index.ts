@@ -130,4 +130,4 @@ const enhancedPrisma = Object.assign(prisma, {
 });
 
 export default enhancedPrisma;
-export * from '@prisma/client'; 
+export * from '@prisma/client';

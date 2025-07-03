@@ -31,8 +31,6 @@ dist/
 .dynamodb/
 .tern-port
 
-# Turbo (monorepo tool)
-.turbo/
 
 # misc
 .DS_Store
@@ -82,9 +80,3 @@ lerna-debug.log*
 *~
 .DS_Store
 Thumbs.db
-
-AUTHENTICATION_STATUS.md
-AUTHENTICATION_TEST.md
-MICROSOFT_OAUTH_SETUP.md
-MONGODB_SETUP.md
-ROLE_MANAGEMENT_SYSTEM.md

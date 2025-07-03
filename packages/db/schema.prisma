@@ -542,6 +542,7 @@ model OneTimePassword {
   email     String
   token     String   @unique
   expires   DateTime
+  type      OTPType? @default(EMAIL_VERIFICATION)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -721,4 +722,9 @@ enum ReportType {
   CASH_FLOW_PROJECTION
   RISK_ANALYSIS
   CUSTOM
+}
+
+enum OTPType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
 } 
