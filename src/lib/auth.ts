@@ -32,8 +32,6 @@ export const authOptions: AuthOptions = {
         }
 
         try {
-          await prisma.$connect();
-
           const user = await prisma.user.findUnique({
             where: { email: credentials.email },
           });
@@ -51,11 +49,11 @@ export const authOptions: AuthOptions = {
             return null;
           }
 
-          // Update last login
-          await prisma.user.update({
+          // Update last login in background (don't await to speed up auth)
+          prisma.user.update({
             where: { id: user.id },
             data: { lastLoginAt: new Date() },
-          });
+          }).catch(console.error);
 
           return {
             id: user.id,
@@ -75,93 +73,108 @@ export const authOptions: AuthOptions = {
   },
   callbacks: {
     async signIn({ user, account, profile }) {
-      // For OAuth providers, ensure user has organization and proper role setup
+      // For OAuth providers, optimize user creation/update
       if (account?.provider !== 'credentials' && user.email) {
         try {
-          await prisma.$connect();
-          
-          // Check if user already exists (adapter might have created basic user)
-          let existingUser = await prisma.user.findUnique({
-            where: { email: user.email },
-          });
-
-          if (!existingUser) {
-            // Create organization first for new OAuth users
-            const organization = await prisma.organization.create({
-              data: {
-                name: `${user.name || user.email}'s Organization`,
-                subscriptionStatus: 'TRIAL',
-                subscriptionTier: 'BASIC',
-              },
+          // Use a single transaction to handle all OAuth user setup
+          await prisma.$transaction(async (tx: any) => {
+            // Check if user exists
+            let existingUser = await tx.user.findUnique({
+              where: { email: user.email! },
+              select: { 
+                id: true, 
+                organizationId: true, 
+                role: true, 
+                emailVerified: true,
+                permissions: true
+              }
             });
 
-            // Create the user with organization - OAuth users get MEMBER role and are pre-verified
-            existingUser = await prisma.user.create({
-              data: {
-                email: user.email!,
-                name: user.name || user.email!.split('@')[0],
-                image: user.image,
-                emailVerified: new Date(), // OAuth users are pre-verified (no OTP needed)
-                organizationId: organization.id,
-                role: 'MEMBER', // Default role for new users
-                permissions: ['READ_ALL'], // Basic permissions for new users
-                isActive: true,
-                lastLoginAt: new Date(),
-              },
-            });
-          } else if (!existingUser.organizationId) {
-            // Existing user without organization - create one
-            const organization = await prisma.organization.create({
-              data: {
-                name: `${user.name || user.email}'s Organization`,
-                subscriptionStatus: 'TRIAL',
-                subscriptionTier: 'BASIC',
-              },
-            });
+            if (!existingUser) {
+              // Create organization and user in single transaction
+              const organization = await tx.organization.create({
+                data: {
+                  name: `${user.name || user.email}'s Organization`,
+                  subscriptionStatus: 'TRIAL',
+                  subscriptionTier: 'BASIC',
+                },
+              });
 
-            existingUser = await prisma.user.update({
-              where: { id: existingUser.id },
-              data: {
-                organizationId: organization.id,
-                emailVerified: existingUser.emailVerified || new Date(),
-                role: existingUser.role || 'MEMBER', // Ensure role is set
-                permissions: existingUser.permissions.length > 0 ? existingUser.permissions : ['READ_ALL'],
-                isActive: true,
-                lastLoginAt: new Date(),
-              },
-            });
-          } else {
-            // Update last login time for existing users
-            await prisma.user.update({
-              where: { id: existingUser.id },
-              data: {
-                lastLoginAt: new Date(),
-                isActive: true,
-              },
-            });
-          }
+              existingUser = await tx.user.create({
+                data: {
+                  email: user.email!,
+                  name: user.name || user.email!.split('@')[0],
+                  image: user.image,
+                  emailVerified: new Date(),
+                  organizationId: organization.id,
+                  role: 'MEMBER',
+                  permissions: ['READ_ALL'],
+                  isActive: true,
+                  lastLoginAt: new Date(),
+                },
+              });
+            } else if (!existingUser.organizationId) {
+              // Create organization for existing user
+              const organization = await tx.organization.create({
+                data: {
+                  name: `${user.name || user.email}'s Organization`,
+                  subscriptionStatus: 'TRIAL',
+                  subscriptionTier: 'BASIC',
+                },
+              });
 
-          // Update the user object with database values for JWT (existingUser is guaranteed to exist here)
-          if (existingUser) {
+              existingUser = await tx.user.update({
+                where: { id: existingUser.id },
+                data: {
+                  organizationId: organization.id,
+                  emailVerified: existingUser.emailVerified || new Date(),
+                  role: existingUser.role || 'MEMBER',
+                  permissions: existingUser.permissions.length > 0 ? existingUser.permissions : ['READ_ALL'],
+                  isActive: true,
+                  lastLoginAt: new Date(),
+                },
+              });
+            } else {
+              // Just update last login for existing complete users
+              await tx.user.update({
+                where: { id: existingUser.id },
+                data: {
+                  lastLoginAt: new Date(),
+                  isActive: true,
+                },
+              });
+            }
+
+            // Update user object for JWT
             user.id = existingUser.id;
             (user as any).organizationId = existingUser.organizationId;
             (user as any).role = existingUser.role;
-          }
+          }, {
+            timeout: 8000, // 8 second timeout for OAuth transaction
+          });
         } catch (error) {
           console.error('Error in OAuth signIn callback:', error);
-          // Allow sign-in to continue even if there are database issues
+          // Don't block sign-in for database issues - user can complete setup later
+          return true;
         }
       }
 
       return true;
     },
     async jwt({ token, user, account }) {
-      // For both OAuth and credentials, get fresh user data for JWT
-      if (user?.email) {
+      // Optimize JWT callback - only fetch if needed
+      if (user?.email && !token.organizationId) {
         try {
-          const dbUser = await prisma.user.findUnique({
-            where: { email: user.email },
-          });
+          // Use timeout wrapper for JWT queries
+          const dbUser = await Promise.race([
+            prisma.user.findUnique({
+              where: { email: user.email },
+              select: { organizationId: true, role: true }
+            }),
+            new Promise<null>((_, reject) => 
+              setTimeout(() => reject(new Error('JWT query timeout')), 3000)
+            )
+          ]);
           
           if (dbUser) {
             token.organizationId = dbUser.organizationId;
@@ -169,6 +182,7 @@ export const authOptions: AuthOptions = {
           }
         } catch (error) {
           console.error('Error fetching user data for JWT:', error);
+          // Continue without organization data - user can re-login
         }
       }
       
