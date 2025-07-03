@@ -63,19 +63,19 @@ export default function SignupPage() {
 
     try {
       const response = await fetchWithTimeout('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
       }, 30000); // 30 second timeout
 
-      const data = await response.json();
+    const data = await response.json();
 
-      if (response.ok) {
-        setEmailToVerify(email);
-        setIsModalOpen(true);
-        setResendTimer(60);
+    if (response.ok) {
+      setEmailToVerify(email);
+      setIsModalOpen(true);
+      setResendTimer(60);
         setMessage('Registration successful! Please check your email for verification code.');
-      } else {
+    } else {
         setError(data.message || 'Registration failed. Please try again.');
       }
     } catch (error: any) {
@@ -92,20 +92,20 @@ export default function SignupPage() {
     
     try {
       const res = await fetchWithTimeout('/api/auth/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailToVerify, otp }),
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: emailToVerify, otp }),
       }, 15000); // 15 second timeout
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (res.ok) {
-        setIsModalOpen(false);
-        setMessage('Verification successful! Redirecting to login...');
-        setTimeout(() => {
-          router.push('/login');
-        }, 2000);
-      } else {
+    if (res.ok) {
+      setIsModalOpen(false);
+      setMessage('Verification successful! Redirecting to login...');
+      setTimeout(() => {
+        router.push('/login');
+      }, 2000);
+    } else {
         setError(data.message || 'Verification failed. Please try again.');
       }
     } catch (error: any) {
@@ -122,16 +122,16 @@ export default function SignupPage() {
     
     try {
       const res = await fetchWithTimeout('/api/auth/resend-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailToVerify }),
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: emailToVerify }),
       }, 15000); // 15 second timeout
 
-      const data = await res.json();
-      if (res.ok) {
+    const data = await res.json();
+    if (res.ok) {
         setResendMessage(data.message || 'OTP resent successfully!');
-        setResendTimer(60);
-      } else {
+      setResendTimer(60);
+    } else {
         setError(data.message || 'Failed to resend OTP. Please try again.');
       }
     } catch (error: any) {

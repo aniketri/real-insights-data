@@ -131,7 +131,7 @@ function LoginForm() {
           {error && <p className="text-sm text-center text-red-600 bg-red-100 p-3 rounded-md">
             {error === 'CredentialsSignin' ? 'Invalid email or password.' : error === 'Callback' ? 'There was an issue with the authentication provider. Please check your OAuth configuration and redirect URIs in your Google Cloud Platform project. Ensure that http://localhost:3000/api/auth/callback/google is listed as an authorized redirect URI.' : `Error: ${error}`}
           </p>}
-
+          
           <p className="text-sm text-center text-zinc-600">
             No account?{' '}
             <Link href="/signup" className="font-medium text-zinc-900 hover:text-zinc-700">

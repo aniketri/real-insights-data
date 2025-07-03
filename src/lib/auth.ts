@@ -88,62 +88,62 @@ export const authOptions: AuthOptions = {
                 emailVerified: true,
                 permissions: true
               }
-            });
+          });
 
-            if (!existingUser) {
+          if (!existingUser) {
               // Create organization and user in single transaction
               const organization = await tx.organization.create({
-                data: {
-                  name: `${user.name || user.email}'s Organization`,
-                  subscriptionStatus: 'TRIAL',
-                  subscriptionTier: 'BASIC',
-                },
-              });
+              data: {
+                name: `${user.name || user.email}'s Organization`,
+                subscriptionStatus: 'TRIAL',
+                subscriptionTier: 'BASIC',
+              },
+            });
 
               existingUser = await tx.user.create({
-                data: {
-                  email: user.email!,
-                  name: user.name || user.email!.split('@')[0],
-                  image: user.image,
+              data: {
+                email: user.email!,
+                name: user.name || user.email!.split('@')[0],
+                image: user.image,
                   emailVerified: new Date(),
-                  organizationId: organization.id,
+                organizationId: organization.id,
                   role: 'MEMBER',
                   permissions: ['READ_ALL'],
-                  isActive: true,
-                  lastLoginAt: new Date(),
-                },
-              });
-            } else if (!existingUser.organizationId) {
+                isActive: true,
+                lastLoginAt: new Date(),
+              },
+            });
+          } else if (!existingUser.organizationId) {
               // Create organization for existing user
               const organization = await tx.organization.create({
-                data: {
-                  name: `${user.name || user.email}'s Organization`,
-                  subscriptionStatus: 'TRIAL',
-                  subscriptionTier: 'BASIC',
-                },
-              });
+              data: {
+                name: `${user.name || user.email}'s Organization`,
+                subscriptionStatus: 'TRIAL',
+                subscriptionTier: 'BASIC',
+              },
+            });
 
               existingUser = await tx.user.update({
-                where: { id: existingUser.id },
-                data: {
-                  organizationId: organization.id,
-                  emailVerified: existingUser.emailVerified || new Date(),
+              where: { id: existingUser.id },
+              data: {
+                organizationId: organization.id,
+                emailVerified: existingUser.emailVerified || new Date(),
                   role: existingUser.role || 'MEMBER',
-                  permissions: existingUser.permissions.length > 0 ? existingUser.permissions : ['READ_ALL'],
-                  isActive: true,
-                  lastLoginAt: new Date(),
-                },
-              });
-            } else {
+                permissions: existingUser.permissions.length > 0 ? existingUser.permissions : ['READ_ALL'],
+                isActive: true,
+                lastLoginAt: new Date(),
+              },
+            });
+          } else {
               // Just update last login for existing complete users
               await tx.user.update({
-                where: { id: existingUser.id },
-                data: {
-                  lastLoginAt: new Date(),
-                  isActive: true,
-                },
-              });
-            }
+              where: { id: existingUser.id },
+              data: {
+                lastLoginAt: new Date(),
+                isActive: true,
+              },
+            });
+          }
 
             // Update user object for JWT
             user.id = existingUser.id;
@@ -168,7 +168,7 @@ export const authOptions: AuthOptions = {
           // Use timeout wrapper for JWT queries
           const dbUser = await Promise.race([
             prisma.user.findUnique({
-              where: { email: user.email },
+            where: { email: user.email },
               select: { organizationId: true, role: true }
             }),
             new Promise<null>((_, reject) => 

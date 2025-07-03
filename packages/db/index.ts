@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '.prisma/client';
 
 // Global variable to store the Prisma client instance
 declare global {
@@ -115,7 +115,7 @@ if (process.env.DATABASE_URL && process.env.NODE_ENV === 'development') {
 }
 
 // Enhanced Prisma client with additional utilities
-const enhancedPrisma = Object.assign(prisma, {
+const enhancedPrisma = Object.assign({}, prisma, {
   // Utility methods for better performance
   async healthCheck() {
     try {
