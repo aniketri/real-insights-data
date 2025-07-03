@@ -87,4 +87,6 @@ const nextConfig = {
   },
 };
 
+// Trigger Vercel cache invalidation: production troubleshooting
+
 export default nextConfig; 
