@@ -1,4 +1,4 @@
-import prisma from '@repo/db';
+import prisma from '../../packages/db';
 import GoogleProvider from 'next-auth/providers/google';
 import AzureADProvider from 'next-auth/providers/azure-ad';
 import CredentialsProvider from 'next-auth/providers/credentials';

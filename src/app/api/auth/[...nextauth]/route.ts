@@ -1,6 +1,6 @@
 import NextAuth from 'next-auth';
 // Switch back to full database integration now that DB is reset
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '../../../../lib/auth';
 
 const handler = NextAuth(authOptions);
 

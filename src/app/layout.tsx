@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Public_Sans } from "next/font/google";
 import "./globals.css";
+import KeepAlive from "../components/KeepAlive";
 import Provider from "./Provider";
-import KeepAlive from "@/components/KeepAlive";
 
 const publicSans = Public_Sans({
   subsets: ["latin"],

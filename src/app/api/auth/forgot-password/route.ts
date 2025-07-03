@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@repo/db';
+import prisma from '../../../../../packages/db';
 import { checkDatabaseAvailable } from '@/lib/api-utils';
 import { resend } from '@/lib/mailer';
 import crypto from 'crypto';
