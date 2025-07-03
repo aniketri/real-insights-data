@@ -26,7 +26,6 @@ jobs:
           else
             echo "configured=false" >> $GITHUB_OUTPUT
             echo "⚠️  Vercel secrets not configured. Skipping deployment."
-            echo "📚 See DEPLOYMENT_GUIDE.md for setup instructions."
           fi
 
       - name: Install pnpm
@@ -53,36 +52,12 @@ jobs:
           npm install -g vercel@latest
           vercel --token=${{ secrets.VERCEL_TOKEN }} --prod --yes
 
-  deploy-backend:
-    runs-on: ubuntu-latest
-    name: Deploy Backend to Render
-    
-    steps:
-      - name: Check if Render secrets are configured
-        id: check-render
-        run: |
-          if [[ -n "${{ secrets.RENDER_SERVICE_ID }}" && -n "${{ secrets.RENDER_API_KEY }}" ]]; then
-            echo "configured=true" >> $GITHUB_OUTPUT
-          else
-            echo "configured=false" >> $GITHUB_OUTPUT
-            echo "⚠️  Render secrets not configured. Skipping deployment."
-            echo "📚 See DEPLOYMENT_GUIDE.md for setup instructions."
-          fi
-
-      - name: Deploy to Render
-        if: steps.check-render.outputs.configured == 'true'
-        uses: johnbeynon/render-deploy-action@v0.0.8
-        with:
-          service-id: ${{ secrets.RENDER_SERVICE_ID }}
-          api-key: ${{ secrets.RENDER_API_KEY }}
-
   notify:
     runs-on: ubuntu-latest
-    needs: [deploy-frontend, deploy-backend]
+    needs: [deploy-frontend]
     if: always()
     
     steps:
       - name: Deployment Status
         run: |
-          echo "Frontend deployment: ${{ needs.deploy-frontend.result }}"
-          echo "Backend deployment: ${{ needs.deploy-backend.result }}" 
+          echo "Frontend deployment: ${{ needs.deploy-frontend.result }}" 
