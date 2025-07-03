@@ -5,8 +5,7 @@
   "regions": ["iad1"],
   "functions": {
     "src/app/api/**/*.ts": {
-      "maxDuration": 30,
-      "memory": 1024,
+      "maxDuration": 10,
       "includeFiles": "../../node_modules/.prisma/client/**"
     }
   },
