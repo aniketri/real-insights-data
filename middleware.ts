@@ -6,11 +6,11 @@ export async function middleware(req: NextRequest) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   const { pathname } = req.nextUrl;
 
-  const protectedRoutes = ['/dashboard', '/loans', '/reports', '/settings', '/ai-query'];
-  const publicOnlyRoutes = ['/landing-page', '/login', '/signup', '/accept-invite'];
+  const protectedRoutes = ['/dashboard', '/loans', '/reports', '/settings', '/ai-query', '/onboarding', '/profile'];
+  const authOnlyRoutes = ['/login', '/signup', '/landing-page', '/accept-invite', '/forgot-password', '/reset-password'];
 
   const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
-  const isPublicOnlyRoute = publicOnlyRoutes.includes(pathname);
+  const isAuthOnlyRoute = authOnlyRoutes.some((route) => pathname.startsWith(route));
 
   // Handle root path
   if (pathname === '/') {
@@ -25,9 +25,8 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/landing-page', req.url));
   }
 
-  // Allow authenticated users to access login/signup pages for logout functionality
-  // Only redirect from landing page if authenticated, allow login/signup access
-  if (token && pathname === '/landing-page') {
+  // If authenticated user tries to access auth-only pages, redirect to dashboard
+  if (token && isAuthOnlyRoute) {
     return NextResponse.redirect(new URL('/dashboard', req.url));
   }
 
@@ -41,10 +40,14 @@ export const config = {
     '/reports/:path*',
     '/settings/:path*',
     '/ai-query/:path*',
+    '/onboarding/:path*',
+    '/profile/:path*',
     '/login',
     '/signup',
     '/accept-invite',
     '/landing-page',
+    '/forgot-password',
+    '/reset-password',
     '/',
   ],
 }; 

@@ -1,13 +1,12 @@
 'use client';
 import Link from 'next/link';
-import { signIn, signOut, useSession } from 'next-auth/react';
+import { signIn } from 'next-auth/react';
 import { FormEvent, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 function LoginForm() {
   const searchParams = useSearchParams();
   const error = searchParams.get('error');
-  const { data: session } = useSession();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -133,18 +132,6 @@ function LoginForm() {
             {error === 'CredentialsSignin' ? 'Invalid email or password.' : error === 'Callback' ? 'There was an issue with the authentication provider. Please check your OAuth configuration and redirect URIs in your Google Cloud Platform project. Ensure that http://localhost:3000/api/auth/callback/google is listed as an authorized redirect URI.' : `Error: ${error}`}
           </p>}
 
-          {session && (
-            <div className="text-center">
-              <p className="text-sm text-zinc-600 mb-2">Already logged in as {session.user?.email}</p>
-              <button
-                onClick={() => signOut({ callbackUrl: '/login' })}
-                className="text-sm font-medium text-red-600 hover:text-red-700"
-              >
-                Sign out to create a different account
-              </button>
-            </div>
-          )}
-          
           <p className="text-sm text-center text-zinc-600">
             No account?{' '}
             <Link href="/signup" className="font-medium text-zinc-900 hover:text-zinc-700">
