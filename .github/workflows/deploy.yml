@@ -1,7 +1,9 @@
-name: Deploy
+name: CI/CD
 
 on:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
@@ -10,54 +12,56 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy-frontend:
+  build-and-test:
     runs-on: ubuntu-latest
-    name: Deploy Frontend to Vercel
+    name: Build and Test
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Check if Vercel secrets are configured
-        id: check-vercel
-        run: |
-          if [[ -n "${{ secrets.VERCEL_TOKEN }}" && -n "${{ secrets.VERCEL_ORG_ID }}" && -n "${{ secrets.VERCEL_PROJECT_ID }}" ]]; then
-            echo "configured=true" >> $GITHUB_OUTPUT
-          else
-            echo "configured=false" >> $GITHUB_OUTPUT
-            echo "⚠️  Vercel secrets not configured. Skipping deployment."
-          fi
-
       - name: Install pnpm
-        if: steps.check-vercel.outputs.configured == 'true'
         uses: pnpm/action-setup@v2
         with:
           version: 9.6.0
 
       - name: Setup Node.js
-        if: steps.check-vercel.outputs.configured == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'pnpm'
           cache-dependency-path: 'pnpm-lock.yaml'
 
-      - name: Deploy to Vercel
-        if: steps.check-vercel.outputs.configured == 'true'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm db:generate
         env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: |
-          npm install -g pnpm@9.6.0
-          npm install -g vercel@latest
-          vercel --token=${{ secrets.VERCEL_TOKEN }} --prod --yes
+          DATABASE_URL: "mongodb://localhost:27017/test"
+
+      - name: Lint
+        run: pnpm lint
+        continue-on-error: true
+
+      - name: Build project
+        run: pnpm build
+        env:
+          DATABASE_URL: "mongodb://localhost:27017/test"
+          NEXTAUTH_SECRET: "test-secret"
+          NEXTAUTH_URL: "http://localhost:3000"
+
+      - name: Run tests
+        run: pnpm test
+        env:
+          DATABASE_URL: "mongodb://localhost:27017/test"
 
   notify:
     runs-on: ubuntu-latest
-    needs: [deploy-frontend]
+    needs: [build-and-test]
     if: always()
     
     steps:
       - name: Deployment Status
         run: |
-          echo "Frontend deployment: ${{ needs.deploy-frontend.result }}" 
+          echo "Frontend deployment: ${{ needs.build-and-test.result }}" 
