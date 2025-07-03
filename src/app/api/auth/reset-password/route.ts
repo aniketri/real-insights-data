@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '../../../../../packages/db';
-import { checkDatabaseAvailable } from '@/lib/api-utils';
+import { checkDatabaseAvailable } from '../../../../lib/api-utils';
 import bcrypt from 'bcryptjs';
 
 export async function POST(req: NextRequest) {

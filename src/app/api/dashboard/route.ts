@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../lib/auth';
 import prisma from '../../../../packages/db';
-import { checkDatabaseAvailable } from '@/lib/api-utils';
+import { checkDatabaseAvailable } from '../../../lib/api-utils';
 
 // In-memory cache for dashboard data
 const dashboardCache = new Map<string, { data: any; timestamp: number }>();

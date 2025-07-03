@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '../../../../../packages/db';
-import { resend } from '@/lib/mailer';
-import { OtpEmail } from '@/components/emails/otp-email';
-import { checkRateLimit } from '@/lib/rate-limiter';
+import { resend } from '../../../../lib/mailer';
+import { OtpEmail } from '../../../../components/emails/otp-email';
+import { checkRateLimit } from '../../../../lib/rate-limiter';
 
 export async function POST(request: Request) {
   try {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '../../../../lib/auth';
 import prisma from '../../../../../packages/db';
-import { resend } from '@/lib/mailer';
+import { resend } from '../../../../lib/mailer';
 
 export async function POST(req: NextRequest) {
   try {
