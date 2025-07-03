@@ -7,6 +7,27 @@ import Modal from '../../components/modal';
 import OtpInput from '../../components/otp-input';
 import PasswordStrength from '../../components/password-strength';
 
+// Helper function to add timeout to fetch requests
+const fetchWithTimeout = async (url: string, options: RequestInit, timeoutMs: number = 30000) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out. Please check your connection and try again.');
+    }
+    throw error;
+  }
+};
+
 export default function SignupPage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -15,6 +36,7 @@ export default function SignupPage() {
   const [emailToVerify, setEmailToVerify] = useState('');
   const [otp, setOtp] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
   const [resendTimer, setResendTimer] = useState(60);
   const [resendMessage, setResendMessage] = useState('');
   const [password, setPassword] = useState('');
@@ -33,64 +55,88 @@ export default function SignupPage() {
     event.preventDefault();
     setError('');
     setMessage('');
+    setIsRegistering(true);
+    
     const formData = new FormData(event.currentTarget);
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
-    const response = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
+    try {
+      const response = await fetchWithTimeout('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      }, 30000); // 30 second timeout
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (response.ok) {
-      setEmailToVerify(email);
-      setIsModalOpen(true);
-      setResendTimer(60);
-    } else {
-      setError(data.message);
+      if (response.ok) {
+        setEmailToVerify(email);
+        setIsModalOpen(true);
+        setResendTimer(60);
+        setMessage('Registration successful! Please check your email for verification code.');
+      } else {
+        setError(data.message || 'Registration failed. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      setError(error.message || 'Registration failed. Please check your connection and try again.');
+    } finally {
+      setIsRegistering(false);
     }
   }
 
   const handleOtpVerification = async () => {
     setIsVerifying(true);
     setError('');
-    const res = await fetch('/api/auth/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: emailToVerify, otp }),
-    });
+    
+    try {
+      const res = await fetchWithTimeout('/api/auth/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailToVerify, otp }),
+      }, 15000); // 15 second timeout
 
-    const data = await res.json();
-    setIsVerifying(false);
+      const data = await res.json();
 
-    if (res.ok) {
-      setIsModalOpen(false);
-      setMessage('Verification successful! Redirecting to login...');
-      setTimeout(() => {
-        router.push('/login');
-      }, 2000);
-    } else {
-      setError(data.message);
+      if (res.ok) {
+        setIsModalOpen(false);
+        setMessage('Verification successful! Redirecting to login...');
+        setTimeout(() => {
+          router.push('/login');
+        }, 2000);
+      } else {
+        setError(data.message || 'Verification failed. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('Verification error:', error);
+      setError(error.message || 'Verification failed. Please check your connection and try again.');
+    } finally {
+      setIsVerifying(false);
     }
   };
 
   const handleResendOtp = async () => {
     setResendMessage('');
     setError('');
-    const res = await fetch('/api/auth/resend-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: emailToVerify }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setResendMessage(data.message);
-      setResendTimer(60);
-    } else {
-      setError(data.message);
+    
+    try {
+      const res = await fetchWithTimeout('/api/auth/resend-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailToVerify }),
+      }, 15000); // 15 second timeout
+
+      const data = await res.json();
+      if (res.ok) {
+        setResendMessage(data.message || 'OTP resent successfully!');
+        setResendTimer(60);
+      } else {
+        setError(data.message || 'Failed to resend OTP. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('Resend OTP error:', error);
+      setError(error.message || 'Failed to resend OTP. Please check your connection and try again.');
     }
   };
 
@@ -187,9 +233,17 @@ export default function SignupPage() {
               <div>
                 <button
                   type="submit"
-                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-zinc-900 hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-500"
+                  disabled={isRegistering}
+                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-zinc-900 hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Create account
+                  {isRegistering ? (
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Creating account...
+                    </div>
+                  ) : (
+                    'Create account'
+                  )}
                 </button>
               </div>
             </form>

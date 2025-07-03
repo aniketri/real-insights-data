@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth Test - Real Insights</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 600px; 
+            margin: 50px auto; 
+            padding: 20px; 
+        }
+        .form-group { 
+            margin: 15px 0; 
+        }
+        input { 
+            width: 100%; 
+            padding: 10px; 
+            margin: 5px 0; 
+            border: 1px solid #ddd; 
+            border-radius: 4px; 
+        }
+        button { 
+            background: #007bff; 
+            color: white; 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+        }
+        button:disabled { 
+            background: #ccc; 
+        }
+        .result { 
+            margin: 15px 0; 
+            padding: 10px; 
+            border-radius: 4px; 
+        }
+        .success { 
+            background: #d4edda; 
+            color: #155724; 
+        }
+        .error { 
+            background: #f8d7da; 
+            color: #721c24; 
+        }
+        .info { 
+            background: #d1ecf1; 
+            color: #0c5460; 
+        }
+        .timing { 
+            font-family: monospace; 
+            font-size: 12px; 
+        }
+    </style>
+</head>
+<body>
+    <h1>Real Insights Authentication Test</h1>
+    
+    <div class="form-group">
+        <h3>Registration Test</h3>
+        <input type="email" id="regEmail" placeholder="Email" value="test@example.com">
+        <input type="password" id="regPassword" placeholder="Password" value="TestPassword123!">
+        <button onclick="testRegistration()" id="regBtn">Test Registration</button>
+    </div>
+
+    <div class="form-group">
+        <h3>OTP Verification Test</h3>
+        <input type="email" id="otpEmail" placeholder="Email" value="test@example.com">
+        <input type="text" id="otpCode" placeholder="OTP Code" maxlength="6">
+        <button onclick="testOtpVerification()" id="otpBtn">Test OTP Verification</button>
+    </div>
+
+    <div class="form-group">
+        <h3>Health Check</h3>
+        <button onclick="testHealthCheck()">Check System Health</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        function addResult(type, title, content, timing = null) {
+            const resultsDiv = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = `
+                <strong>${title}</strong><br>
+                ${content}
+                ${timing ? `<div class="timing">Duration: ${timing}ms</div>` : ''}
+            `;
+            resultsDiv.appendChild(div);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function fetchWithTimeout(url, options, timeout = 30000) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {
+                controller.abort();
+                addResult('error', 'Request Timeout', `Request to ${url} timed out after ${timeout}ms`);
+            }, timeout);
+
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                return response;
+            } catch (error) {
+                clearTimeout(timeoutId);
+                if (error.name === 'AbortError') {
+                    throw new Error(`Request timed out after ${timeout}ms`);
+                }
+                throw error;
+            }
+        }
+
+        async function testRegistration() {
+            const startTime = Date.now();
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            const btn = document.getElementById('regBtn');
+            
+            if (!email || !password) {
+                addResult('error', 'Validation Error', 'Please enter both email and password');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Testing...';
+            addResult('info', 'Registration Test Started', `Testing registration for ${email}`);
+
+            try {
+                const response = await fetchWithTimeout('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                }, 30000);
+
+                const duration = Date.now() - startTime;
+                const data = await response.json();
+
+                if (response.ok) {
+                    addResult('success', 'Registration Success', 
+                        `Account created successfully! ${data.debug ? `Debug: ${JSON.stringify(data.debug, null, 2)}` : ''}`, 
+                        duration);
+                    document.getElementById('otpEmail').value = email;
+                } else {
+                    addResult('error', 'Registration Failed', 
+                        `Error: ${data.message} ${data.debug ? `Debug: ${JSON.stringify(data.debug, null, 2)}` : ''}`, 
+                        duration);
+                }
+            } catch (error) {
+                const duration = Date.now() - startTime;
+                addResult('error', 'Registration Error', `Network/JS Error: ${error.message}`, duration);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Test Registration';
+            }
+        }
+
+        async function testOtpVerification() {
+            const startTime = Date.now();
+            const email = document.getElementById('otpEmail').value;
+            const otp = document.getElementById('otpCode').value;
+            const btn = document.getElementById('otpBtn');
+
+            if (!email || !otp) {
+                addResult('error', 'Validation Error', 'Please enter both email and OTP');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Verifying...';
+            addResult('info', 'OTP Verification Started', `Testing OTP verification for ${email}`);
+
+            try {
+                const response = await fetchWithTimeout('/api/auth/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, otp })
+                }, 15000);
+
+                const duration = Date.now() - startTime;
+                const data = await response.json();
+
+                if (response.ok) {
+                    addResult('success', 'OTP Verification Success', data.message, duration);
+                } else {
+                    addResult('error', 'OTP Verification Failed', `Error: ${data.message}`, duration);
+                }
+            } catch (error) {
+                const duration = Date.now() - startTime;
+                addResult('error', 'OTP Verification Error', `Network/JS Error: ${error.message}`, duration);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Test OTP Verification';
+            }
+        }
+
+        async function testHealthCheck() {
+            const startTime = Date.now();
+            addResult('info', 'Health Check Started', 'Checking system health...');
+
+            try {
+                const response = await fetchWithTimeout('/api/health', {
+                    method: 'GET'
+                }, 10000);
+
+                const duration = Date.now() - startTime;
+                const data = await response.json();
+
+                if (response.ok) {
+                    const healthInfo = `
+                        Status: ${data.status}<br>
+                        Database: ${data.services.database.status} (${data.services.database.message})<br>
+                        Email: ${data.services.email.status} (${data.services.email.message})<br>
+                        System: ${data.services.system.status} (${data.services.system.message})
+                    `;
+                    addResult('success', 'Health Check Success', healthInfo, duration);
+                } else {
+                    addResult('error', 'Health Check Failed', `HTTP ${response.status}: ${JSON.stringify(data)}`, duration);
+                }
+            } catch (error) {
+                const duration = Date.now() - startTime;
+                addResult('error', 'Health Check Error', `Network/JS Error: ${error.message}`, duration);
+            }
+        }
+
+        // Test on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            addResult('info', 'Page Loaded', 'Test page loaded successfully. Click buttons above to test authentication.');
+            testHealthCheck();
+        });
+    </script>
+</body>
+</html> 

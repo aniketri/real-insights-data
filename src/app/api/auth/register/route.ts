@@ -7,6 +7,10 @@ import { OtpEmail } from '../../../../components/emails/otp-email';
 import { checkRateLimit } from '../../../../lib/rate-limiter';
 
 export async function POST(req: NextRequest) {
+  const requestId = Math.random().toString(36).substring(7);
+  const startTime = Date.now();
+  console.log(`[${requestId}] Registration request started at ${new Date().toISOString()}`);
+
   // Check database availability during build
   const dbCheck = checkDatabaseAvailable();
   if (dbCheck) return dbCheck;
@@ -18,13 +22,17 @@ export async function POST(req: NextRequest) {
     }
     
     const { email, password } = await req.json();
+    console.log(`[${requestId}] Parsed request body - Email: ${email}`);
 
     if (!email || !password) {
       return NextResponse.json({ message: 'Email and password are required' }, { status: 400 });
     }
 
     // Rate limiting: max 5 registration attempts per email per 15 minutes
+    let stepStart = Date.now();
     const rateLimitCheck = checkRateLimit(`register:${email}`, 5, 15 * 60 * 1000);
+    console.log(`[${requestId}] Rate limit check: ${Date.now() - stepStart}ms`);
+    
     if (!rateLimitCheck.allowed) {
       return NextResponse.json({ 
         message: `Too many registration attempts. Please try again in ${rateLimitCheck.retryAfter} seconds.` 
@@ -35,103 +43,124 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Password must be at least 8 characters long' }, { status: 400 });
     }
 
-    // Verify database connectivity
-    try {
-      await prisma.$connect();
-    } catch (dbError) {
-      console.error('Database connection failed:', dbError);
-      return NextResponse.json({ message: 'Service temporarily unavailable' }, { status: 503 });
-    }
-
-    // Check if user already exists and is verified
-    const existingUser = await prisma.user.findFirst({
-      where: { email, emailVerified: { not: null } },
-    });
-
-    if (existingUser) {
-      return NextResponse.json({ message: 'User already exists' }, { status: 409 });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create organization first
-    const organization = await prisma.organization.create({
-      data: {
-        name: `${email.split('@')[0]}'s Organization`,
-      },
-    });
-
-    // Create or update user with organization
-    const user = await prisma.user.upsert({
-      where: { email },
-      update: {
-        passwordHash: hashedPassword,
-        organizationId: organization.id,
-        // Reset emailVerified to null since we need to verify again
-        emailVerified: null,
-      },
-      create: {
-        email,
-        passwordHash: hashedPassword,
-        name: email.split('@')[0],
-        organizationId: organization.id,
-        role: 'MEMBER', // Default role for new users
-        permissions: ['READ_ALL'], // Basic permissions for new users
-        emailVerified: null, // Will be set after OTP verification
-      },
-    });
-
-    // Generate OTP
+    // Generate OTP and hash password in parallel
+    stepStart = Date.now();
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expires = new Date();
-    expires.setMinutes(expires.getMinutes() + 10); // OTP expires in 10 minutes
+    expires.setMinutes(expires.getMinutes() + 10);
+    
+    const [hashedPassword] = await Promise.all([
+      bcrypt.hash(password, 10)
+    ]);
+    console.log(`[${requestId}] Password hashing: ${Date.now() - stepStart}ms`);
 
-    // Clean up any existing OTPs for this email (only 6-digit OTPs, not password reset tokens)
-    const existingTokens = await prisma.oneTimePassword.findMany({
-      where: { email },
-    });
-    
-    const otpTokensToDelete = existingTokens.filter(t => t.token.length === 6);
-    
-    if (otpTokensToDelete.length > 0) {
-      await prisma.oneTimePassword.deleteMany({
-        where: { 
-          id: { in: otpTokensToDelete.map(t => t.id) }
+    // Perform all database operations in a single transaction for better performance
+    stepStart = Date.now();
+    const result = await prisma.$transaction(async (tx: any) => {
+      // Check if user already exists and is verified
+      const existingUser = await tx.user.findFirst({
+        where: { email, emailVerified: { not: null } },
+      });
+
+      if (existingUser) {
+        throw new Error('User already exists');
+      }
+
+      // Create organization
+      const organization = await tx.organization.create({
+        data: {
+          name: `${email.split('@')[0]}'s Organization`,
         },
       });
-    }
 
-    // Create new OTP
-    await prisma.oneTimePassword.create({
-      data: {
-        email,
-        token: otp,
-        expires,
-      },
+      // Create or update user
+      const user = await tx.user.upsert({
+        where: { email },
+        update: {
+          passwordHash: hashedPassword,
+          organizationId: organization.id,
+          emailVerified: null,
+        },
+        create: {
+          email,
+          passwordHash: hashedPassword,
+          name: email.split('@')[0],
+          organizationId: organization.id,
+          role: 'MEMBER',
+          permissions: ['READ_ALL'],
+          emailVerified: null,
+        },
+      });
+
+      // Clean up existing OTPs and create new one
+      await tx.oneTimePassword.deleteMany({
+        where: { 
+          email
+        },
+      });
+
+      // Create new OTP
+      await tx.oneTimePassword.create({
+        data: {
+          email,
+          token: otp,
+          expires,
+        },
+      });
+
+      return { user, organization };
+    }, {
+      timeout: 15000, // 15 second timeout for the transaction
     });
+    
+    console.log(`[${requestId}] Database transaction: ${Date.now() - stepStart}ms`);
 
-    // Send OTP email
+    // Send email in background (don't wait for it)
+    stepStart = Date.now();
     if (resend) {
-      try {
-        await resend.emails.send({
-          from: process.env.FROM_EMAIL || 'noreply@realinsights.com',
-          to: email,
-          subject: 'Verify your email address - Real Insights',
-          react: OtpEmail({ otp }),
-        });
-      } catch (emailError) {
-        console.error('Failed to send OTP email:', emailError);
-        // Continue anyway - user can use resend OTP
-      }
+      // Don't await email sending - let it happen in background
+      resend.emails.send({
+        from: process.env.FROM_EMAIL || 'noreply@realinsights.com',
+        to: email,
+        subject: 'Verify your email address - Real Insights',
+        react: OtpEmail({ otp }),
+      }).then((emailResult) => {
+        console.log(`[${requestId}] Email sent: ${Date.now() - stepStart}ms, ID: ${emailResult.data?.id}`);
+      }).catch((emailError) => {
+        console.error(`[${requestId}] Failed to send OTP email:`, emailError);
+      });
+    } else {
+      console.log(`[${requestId}] Email service not configured, skipping email send`);
     }
+
+    const totalDuration = Date.now() - startTime;
+    console.log(`[${requestId}] Registration completed successfully in ${totalDuration}ms`);
 
     return NextResponse.json({ 
-      message: 'Account created successfully. Please check your email for the verification code.' 
+      message: 'Account created successfully. Please check your email for the verification code.',
+      debug: process.env.NODE_ENV === 'development' ? {
+        requestId,
+        duration: totalDuration,
+        userId: result.user.id,
+        organizationId: result.organization.id
+      } : undefined
     }, { status: 201 });
   } catch (error) {
-    console.error('Registration error:', error);
+    const totalDuration = Date.now() - startTime;
+    console.error(`[${requestId}] Registration error after ${totalDuration}ms:`, error);
+    
+    // Handle specific error cases
+    if (error instanceof Error && error.message === 'User already exists') {
+      return NextResponse.json({ message: 'User already exists' }, { status: 409 });
+    }
+    
     return NextResponse.json({ 
-      message: 'An unexpected error occurred. Please try again.' 
+      message: 'An unexpected error occurred. Please try again.',
+      debug: process.env.NODE_ENV === 'development' ? {
+        requestId,
+        duration: totalDuration,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      } : undefined
     }, { status: 500 });
   }
 } 
