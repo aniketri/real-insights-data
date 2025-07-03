@@ -3,9 +3,9 @@ import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 import { FormEvent, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Modal from '@/components/modal';
-import OtpInput from '@/components/otp-input';
-import PasswordStrength from '@/components/password-strength';
+import Modal from '../../components/modal';
+import OtpInput from '../../components/otp-input';
+import PasswordStrength from '../../components/password-strength';
 
 export default function SignupPage() {
   const [message, setMessage] = useState('');

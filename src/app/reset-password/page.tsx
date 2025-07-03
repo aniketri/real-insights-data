@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { FormEvent, useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import PasswordStrength from '@/components/password-strength';
+import PasswordStrength from '../../components/password-strength';
 
 function ResetPasswordForm() {
   const [password, setPassword] = useState('');
