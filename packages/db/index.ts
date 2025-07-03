@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 // Global variable to store the Prisma client instance
 declare global {
   var __prisma: PrismaClient | undefined;
-}
+} 
 
 // Enhanced Prisma client configuration for production performance
 const createPrismaClient = () => {
