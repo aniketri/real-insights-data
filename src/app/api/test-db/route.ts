@@ -22,17 +22,17 @@ export async function GET() {
     const connectTime = Date.now() - connectStart;
     console.log(`✅ Connected in ${connectTime}ms`);
 
-    // Test 2: Simple query test
-    console.log('Step 2: Testing simple query...');
-    const queryStart = Date.now();
-    const result = await Promise.race([
-      prisma.$queryRaw`SELECT 1 as test`,
+    // Test 2: Health check test
+    console.log('Step 2: Testing health check...');
+    const healthStart = Date.now();
+    const healthResult = await Promise.race([
+      prisma.healthCheck(),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Query timeout after 5s')), 5000)
+        setTimeout(() => reject(new Error('Health check timeout after 5s')), 5000)
       )
     ]);
-    const queryTime = Date.now() - queryStart;
-    console.log(`✅ Query completed in ${queryTime}ms`);
+    const healthTime = Date.now() - healthStart;
+    console.log(`✅ Health check completed in ${healthTime}ms:`, healthResult);
 
     // Test 3: Organization table test
     console.log('Step 3: Testing organization table...');
@@ -52,7 +52,7 @@ export async function GET() {
       status: 'success',
       tests: {
         connection: { time: connectTime, status: 'passed' },
-        simpleQuery: { time: queryTime, status: 'passed' },
+        healthCheck: { time: healthTime, result: healthResult, status: 'passed' },
         organizationQuery: { time: orgTime, count: orgCount, status: 'passed' }
       },
       environment: process.env.NODE_ENV,
