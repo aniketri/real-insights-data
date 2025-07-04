@@ -143,8 +143,8 @@ export async function POST(req: Request) {
       where: { email: session.user.email },
     });
 
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    if (!user || !user.organizationId) {
+      return NextResponse.json({ error: 'User or organization not found' }, { status: 404 });
     }
 
     // Save the report configuration to the database
