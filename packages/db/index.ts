@@ -114,51 +114,45 @@ if (process.env.DATABASE_URL && process.env.NODE_ENV === 'development') {
   console.warn('⚠️ Skipping database connection during build (DATABASE_URL not available)');
 }
 
-// Enhanced Prisma client with additional utilities
-const enhancedPrisma = Object.assign({}, prisma, {
-  // Utility methods for better performance
-  async healthCheck() {
-    try {
-      // Use a simple query with timeout
-      const result = await Promise.race([
-        prisma.organization.findFirst({ take: 1 }),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Health check timeout')), 3000)
-        )
-      ]);
-      return { status: 'healthy', connected: isConnected };
-    } catch (error: any) {
-      return { status: 'unhealthy', error: error?.message || 'Unknown error', connected: false };
-    }
-  },
-  
-  // Batch operations helper with timeout
-  async batchTransaction<T>(operations: Array<(prisma: any) => Promise<T>>): Promise<T[]> {
-    return Promise.race([
-      prisma.$transaction(async (tx: any) => {
-        const results: T[] = [];
-        for (const operation of operations) {
-          results.push(await operation(tx));
-        }
-        return results;
-      }),
-      new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Transaction timeout')), 8000)
+// Add utility methods directly to the prisma instance
+prisma.healthCheck = async function() {
+  try {
+    // Use a simple query with timeout
+    const result = await Promise.race([
+      this.organization.findFirst({ take: 1 }),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Health check timeout')), 3000)
       )
     ]);
-  },
-  
-  // Connection status
-  get isConnected() {
-    return isConnected;
-  },
-  
-  // Force reconnect with timeout
-  async reconnect() {
-    isConnected = false;
-    return connectWithRetry();
+    return { status: 'healthy', connected: isConnected };
+  } catch (error: any) {
+    return { status: 'unhealthy', error: error?.message || 'Unknown error', connected: false };
   }
+};
+
+prisma.batchTransaction = async function<T>(operations: Array<(prisma: any) => Promise<T>>): Promise<T[]> {
+  return Promise.race([
+    this.$transaction(async (tx: any) => {
+      const results: T[] = [];
+      for (const operation of operations) {
+        results.push(await operation(tx));
+      }
+      return results;
+    }),
+    new Promise<never>((_, reject) => 
+      setTimeout(() => reject(new Error('Transaction timeout')), 8000)
+    )
+  ]);
+};
+
+Object.defineProperty(prisma, 'isConnected', {
+  get: () => isConnected
 });
 
-export default enhancedPrisma;
+prisma.reconnect = async function() {
+  isConnected = false;
+  return connectWithRetry();
+};
+
+export default prisma;
 export * from '@prisma/client';
