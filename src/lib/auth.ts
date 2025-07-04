@@ -73,89 +73,39 @@ export const authOptions: AuthOptions = {
   },
   callbacks: {
     async signIn({ user, account, profile }) {
-      // For OAuth providers, optimize user creation/update
+      // For OAuth providers, just ensure user exists - defer complex setup
       if (account?.provider !== 'credentials' && user.email) {
         try {
-          // Use a single transaction to handle all OAuth user setup
-          await prisma.$transaction(async (tx: any) => {
-            // Check if user exists
-            let existingUser = await tx.user.findUnique({
-              where: { email: user.email! },
-              select: { 
-                id: true, 
-                organizationId: true, 
-                role: true, 
-                emailVerified: true,
-                permissions: true
-              }
+          // Simple check - create basic user if doesn't exist
+          const existingUser = await prisma.user.findUnique({
+            where: { email: user.email! },
+            select: { id: true, emailVerified: true }
           });
 
           if (!existingUser) {
-              // Create organization and user in single transaction
-              const organization = await tx.organization.create({
-              data: {
-                name: `${user.name || user.email}'s Organization`,
-                subscriptionStatus: 'TRIAL',
-                subscriptionTier: 'BASIC',
-              },
-            });
-
-              existingUser = await tx.user.create({
+            // Create minimal user - organization setup happens later
+            await prisma.user.create({
               data: {
                 email: user.email!,
                 name: user.name || user.email!.split('@')[0],
                 image: user.image,
-                  emailVerified: new Date(),
-                organizationId: organization.id,
-                  role: 'MEMBER',
-                  permissions: ['READ_ALL'],
-                isActive: true,
-                lastLoginAt: new Date(),
-              },
-            });
-          } else if (!existingUser.organizationId) {
-              // Create organization for existing user
-              const organization = await tx.organization.create({
-              data: {
-                name: `${user.name || user.email}'s Organization`,
-                subscriptionStatus: 'TRIAL',
-                subscriptionTier: 'BASIC',
-              },
-            });
-
-              existingUser = await tx.user.update({
-              where: { id: existingUser.id },
-              data: {
-                organizationId: organization.id,
-                emailVerified: existingUser.emailVerified || new Date(),
-                  role: existingUser.role || 'MEMBER',
-                permissions: existingUser.permissions.length > 0 ? existingUser.permissions : ['READ_ALL'],
+                emailVerified: new Date(),
+                role: 'MEMBER',
+                permissions: ['READ_ALL'],
                 isActive: true,
                 lastLoginAt: new Date(),
               },
             });
           } else {
-              // Just update last login for existing complete users
-              await tx.user.update({
+            // Just update last login
+            await prisma.user.update({
               where: { id: existingUser.id },
-              data: {
-                lastLoginAt: new Date(),
-                isActive: true,
-              },
+              data: { lastLoginAt: new Date() },
             });
           }
-
-            // Update user object for JWT
-            user.id = existingUser.id;
-            (user as any).organizationId = existingUser.organizationId;
-            (user as any).role = existingUser.role;
-          }, {
-            timeout: 8000, // 8 second timeout for OAuth transaction
-          });
         } catch (error) {
           console.error('Error in OAuth signIn callback:', error);
-          // Don't block sign-in for database issues - user can complete setup later
-          return true;
+          // Don't block sign-in - user can complete setup later
         }
       }
 
