@@ -52,12 +52,12 @@ export async function POST(req: NextRequest) {
       where: { email },
     });
     
-    const resetTokensToDelete = existingTokens.filter(t => t.token.length === 64);
+    const resetTokensToDelete = existingTokens.filter((t: any) => t.token.length === 64);
     
     if (resetTokensToDelete.length > 0) {
       await prisma.oneTimePassword.deleteMany({
         where: { 
-          id: { in: resetTokensToDelete.map(t => t.id) }
+          id: { in: resetTokensToDelete.map((t: any) => t.id) }
         },
       });
     }

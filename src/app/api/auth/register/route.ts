@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     let result: RegistrationResult | undefined;
     try {
       const transactionResult = await Promise.race([
-        prisma.$transaction(async (tx) => {
+        prisma.$transaction(async (tx: any) => {
           // Check if user already exists and is verified
           const existingUser = await tx.user.findFirst({
             where: { email },
