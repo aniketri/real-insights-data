@@ -65,56 +65,56 @@ export async function POST(req: NextRequest) {
     try {
       const transactionResult = await Promise.race([
         prisma.$transaction(async (tx: any) => {
-          // Check if user already exists and is verified
+    // Check if user already exists and is verified
           const existingUser = await tx.user.findFirst({
             where: { email },
             select: { id: true, emailVerified: true }
-          });
+    });
 
           if (existingUser?.emailVerified) {
             throw new Error('User already exists');
-          }
+    }
 
           // Create organization
           const organization = await tx.organization.create({
-            data: {
+      data: {
               name: organizationName
             }
-          });
+    });
 
           // Hash password
           const hashedPassword = await bcrypt.hash(password, 10);
 
           // Create or update user
           const user = await tx.user.upsert({
-            where: { email },
-            update: {
-              passwordHash: hashedPassword,
+      where: { email },
+      update: {
+        passwordHash: hashedPassword,
               name,
               organizationId: organization.id
-            },
-            create: {
-              email,
-              passwordHash: hashedPassword,
+      },
+      create: {
+        email,
+        passwordHash: hashedPassword,
               name,
-              organizationId: organization.id,
+        organizationId: organization.id,
               role: 'ADMIN'
             }
-          });
+    });
 
           // Generate new OTP
-          const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
           const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
           // Create OTP record
           await (tx as any).oneTimePassword.create({
-            data: {
-              email,
-              token: otp,
-              expires,
+      data: {
+        email,
+        token: otp,
+        expires,
               type: 'EMAIL_VERIFICATION'
             }
-          });
+    });
 
           return { user, organization, otp };
         }, {
@@ -127,8 +127,8 @@ export async function POST(req: NextRequest) {
       
       const { user, organization, otp } = transactionResult as RegistrationResult & { otp: string };
 
-      // Send OTP email
-      if (resend) {
+    // Send OTP email
+    if (resend) {
         await resend.emails.send({
           from: 'Real Insights <noreply@realinsights.io>',
           to: email,
@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
     const totalDuration = Date.now() - startTime;
     console.log(`[${requestId}] Registration completed in ${totalDuration}ms`);
 
-    return NextResponse.json({
+    return NextResponse.json({ 
       message: 'Registration successful',
       data: result ? {
         requestId,
