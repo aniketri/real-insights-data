@@ -73,26 +73,44 @@ export const authOptions: AuthOptions = {
   },
   callbacks: {
     async signIn({ user, account, profile }) {
-      // For OAuth providers, defer all database operations
+      console.log('🔐 SignIn callback:', { 
+        provider: account?.provider, 
+        userEmail: user?.email,
+        userId: user?.id 
+      });
+
+      // For OAuth providers, the PrismaAdapter handles user creation
       if (account?.provider !== 'credentials') {
-        // Just return true - user creation happens via Prisma adapter
+        console.log('✅ OAuth sign-in successful for:', user?.email);
         return true;
       }
 
       return true;
     },
     async jwt({ token, user, account }) {
-      // Only add user data on initial sign-in, don't query database
+      console.log('🎫 JWT callback:', { 
+        hasUser: !!user, 
+        hasAccount: !!account,
+        tokenSub: token.sub 
+      });
+
+      // Only add user data on initial sign-in
       if (user) {
         token.id = user.id;
         // Set defaults - will be updated during onboarding
         token.organizationId = null;
         token.role = 'MEMBER';
+        console.log('✅ JWT token updated with user data');
       }
       
       return token;
     },
     async session({ session, token }) {
+      console.log('🔍 Session callback:', { 
+        sessionUserEmail: session.user?.email,
+        tokenSub: token.sub 
+      });
+
       session.user.id = token.sub as string;
       (session.user as any).organizationId = token.organizationId as string;
       (session.user as any).role = token.role as string;
@@ -102,6 +120,8 @@ export const authOptions: AuthOptions = {
   pages: {
     signIn: '/login',
   },
+  // Add debug logging in development
+  debug: process.env.NODE_ENV === 'development',
 };
 
 export const auth = () => getServerSession(authOptions); 
