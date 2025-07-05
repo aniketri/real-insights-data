@@ -7,15 +7,6 @@ declare global {
 
 // Simple Prisma client configuration for serverless
 const createPrismaClient = () => {
-  // Skip Prisma client creation during build time if DATABASE_URL is not available
-  if (!process.env.DATABASE_URL && process.env.NODE_ENV !== 'development') {
-    console.warn('⚠️ DATABASE_URL not found, creating minimal Prisma client for build');
-    return new PrismaClient({
-      log: ['error'],
-      errorFormat: 'minimal',
-    });
-  }
-
   return new PrismaClient({
     log: process.env.NODE_ENV === 'development' 
       ? ['query', 'info', 'warn', 'error']
@@ -38,12 +29,12 @@ if (process.env.NODE_ENV === 'development') {
   globalThis.__prisma = prisma;
 }
 
-// Add utility methods with better error handling
-prisma.healthCheck = async function() {
+// Separate health check function
+export const healthCheck = async () => {
   try {
     // Use a simple query with timeout for serverless
     const result = await Promise.race([
-      this.organization.findFirst({ take: 1 }),
+      prisma.organization.findFirst({ take: 1 }),
       new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Health check timeout after 5s')), 5000)
       )
@@ -57,7 +48,7 @@ prisma.healthCheck = async function() {
       connected: false,
       details: {
         databaseUrl: process.env.DATABASE_URL ? 'configured' : 'missing',
-        environment: process.env.NODE_ENV,
+        environment: process.env.NODE_ENV || 'unknown',
         timestamp: new Date().toISOString()
       }
     };
@@ -65,4 +56,5 @@ prisma.healthCheck = async function() {
 };
 
 export default prisma;
+export { healthCheck };
 export * from '@prisma/client';

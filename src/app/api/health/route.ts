@@ -22,18 +22,16 @@ export async function GET() {
 
   // Check database connectivity
   try {
-    const dbHealth = await prisma.healthCheck();
+    const result = await prisma.organization.findFirst({ take: 1 });
     healthStatus.services.database = {
-      status: dbHealth.status,
-      message: dbHealth.status === 'healthy' 
-        ? 'Database connected successfully' 
-        : `Database error: ${dbHealth.error}`,
-      connected: dbHealth.connected
+      status: 'healthy',
+      message: 'Database connected successfully',
+      connected: true
     };
   } catch (error: any) {
     healthStatus.services.database = {
       status: 'unhealthy',
-      message: `Database connection failed: ${error.message}`,
+      message: `Database error: ${error.message}`,
       connected: false
     };
     healthStatus.status = 'degraded';
