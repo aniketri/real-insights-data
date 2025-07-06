@@ -1,9 +1,21 @@
 'use client';
+
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 import { FormEvent, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Modal from '../../components/modal';
+import { motion } from 'framer-motion';
+import { Button, Input, Card, Alert, Container, Modal } from '../../components/ui/design-system';
+import { 
+  BuildingOfficeIcon, 
+  EyeIcon, 
+  EyeSlashIcon,
+  EnvelopeIcon,
+  LockClosedIcon,
+  UserIcon,
+  BuildingOffice2Icon,
+  CheckCircleIcon
+} from '@heroicons/react/24/outline';
 import OtpInput from '../../components/otp-input';
 import PasswordStrength from '../../components/password-strength';
 
@@ -39,7 +51,13 @@ export default function SignupPage() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [resendTimer, setResendTimer] = useState(60);
   const [resendMessage, setResendMessage] = useState('');
-  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    organizationName: '',
+    password: ''
+  });
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -57,27 +75,21 @@ export default function SignupPage() {
     setMessage('');
     setIsRegistering(true);
     
-    const formData = new FormData(event.currentTarget);
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-    const name = formData.get('name') as string;
-    const organizationName = formData.get('organizationName') as string;
-
     try {
       const response = await fetchWithTimeout('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, name, organizationName }),
-      }, 30000); // 30 second timeout
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      }, 30000);
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (response.ok) {
-      setEmailToVerify(email);
-      setIsModalOpen(true);
-      setResendTimer(60);
+      if (response.ok) {
+        setEmailToVerify(formData.email);
+        setIsModalOpen(true);
+        setResendTimer(60);
         setMessage('Registration successful! Please check your email for verification code.');
-    } else {
+      } else {
         setError(data.message || 'Registration failed. Please try again.');
       }
     } catch (error: any) {
@@ -94,20 +106,20 @@ export default function SignupPage() {
     
     try {
       const res = await fetchWithTimeout('/api/auth/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: emailToVerify, otp }),
-      }, 15000); // 15 second timeout
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailToVerify, otp }),
+      }, 15000);
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (res.ok) {
-      setIsModalOpen(false);
-      setMessage('Verification successful! Redirecting to login...');
-      setTimeout(() => {
-        router.push('/login');
-      }, 2000);
-    } else {
+      if (res.ok) {
+        setIsModalOpen(false);
+        setMessage('Verification successful! Redirecting to login...');
+        setTimeout(() => {
+          router.push('/login');
+        }, 2000);
+      } else {
         setError(data.message || 'Verification failed. Please try again.');
       }
     } catch (error: any) {
@@ -124,16 +136,16 @@ export default function SignupPage() {
     
     try {
       const res = await fetchWithTimeout('/api/auth/resend-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: emailToVerify }),
-      }, 15000); // 15 second timeout
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailToVerify }),
+      }, 15000);
 
-    const data = await res.json();
-    if (res.ok) {
+      const data = await res.json();
+      if (res.ok) {
         setResendMessage(data.message || 'OTP resent successfully!');
-      setResendTimer(60);
-    } else {
+        setResendTimer(60);
+      } else {
         setError(data.message || 'Failed to resend OTP. Please try again.');
       }
     } catch (error: any) {
@@ -142,214 +154,285 @@ export default function SignupPage() {
     }
   };
 
+  const handleGoogleSignup = async () => {
+    try {
+      await signIn('google', { callbackUrl: '/dashboard' });
+    } catch (error) {
+      console.error('Google signup error:', error);
+    }
+  };
+
+  const handleMicrosoftSignup = async () => {
+    try {
+      await signIn('azure-ad', { callbackUrl: '/dashboard' });
+    } catch (error) {
+      console.error('Microsoft signup error:', error);
+    }
+  };
+
   return (
     <>
-      <div className="flex flex-col min-h-screen bg-[#F8F8F8]">
-        <header className="fixed top-0 left-0 right-0 z-10 bg-[#F8F8F8]/80 backdrop-blur-sm">
-          <div className="max-w-6xl mx-auto px-6">
-            <div className="flex items-center justify-between border-b border-zinc-200 h-20">
-              <Link href="/landing-page" className="flex items-center gap-4">
-                <div className="size-5">
-                  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M24 4H6V17.3333V30.6667H24V44H42V30.6667V17.3333H24V4Z" fill="currentColor"></path>
-                  </svg>
-                </div>
-                <span className="text-2xl font-semibold">Real Insights</span>
-              </Link>
-              <nav className="flex items-center gap-6">
-                <Link href="/login" className="text-sm font-medium hover:text-zinc-600 transition-colors">
-                  Sign In
-                </Link>
-              </nav>
-            </div>
-          </div>
-        </header>
-
-        <main className="flex-1 flex items-center justify-center mt-20">
-          <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-md">
-            <h2 className="text-3xl font-bold text-center text-zinc-900">Create an account</h2>
-
-            <div className="space-y-4">
-              <button
-                onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
-                className="w-full inline-flex items-center justify-center py-2 px-4 border border-zinc-300 rounded-md shadow-sm bg-white text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-              >
-                <svg className="mr-2 -ml-1 w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48px" height="48px"><path fill="#fbc02d" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12	s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20	s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/><path fill="#e53935" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039	l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/><path fill="#4caf50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36	c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/><path fill="#1565c0" d="M43.611,20.083L43.595,20L42,20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571	c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/></svg>
-                Continue with Google
-              </button>
-                          <button
-              onClick={() => signIn('azure-ad', { callbackUrl: '/dashboard' })}
-              className="w-full inline-flex items-center justify-center py-2 px-4 border border-zinc-300 rounded-md shadow-sm bg-white text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+        
+        <Container className="relative z-10">
+          <div className="max-w-md mx-auto">
+            {/* Header */}
+            <motion.div 
+              className="text-center mb-8"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
             >
-                <svg className="mr-2 -ml-1 w-5 h-5" enable-background="new 0 0 2499.6 2500" viewBox="0 0 2499.6 2500" xmlns="http://www.w3.org/2000/svg"><path d="m1187.9 1187.9h-1187.9v-1187.9h1187.9z" fill="#f1511b"/><path d="m2499.6 1187.9h-1188v-1187.9h1187.9v1187.9z" fill="#80cc28"/><path d="m1187.9 2500h-1187.9v-1187.9h1187.9z" fill="#00adef"/><path d="m2499.6 2500h-1188v-1187.9h1187.9v1187.9z" fill="#fbbc09"/></svg>
-                Continue with Microsoft
-              </button>
-            </div>
-
-            <div className="flex items-center justify-center space-x-2">
-              <div className="flex-1 h-px bg-zinc-300"></div>
-              <p className="text-sm text-zinc-500">OR</p>
-              <div className="flex-1 h-px bg-zinc-300"></div>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label
-                  htmlFor="name"
-                  className="text-sm font-medium text-zinc-700 sr-only"
-                >
-                  Full Name
-                </label>
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  autoComplete="name"
-                  required
-                  className="w-full px-3 py-2 border border-zinc-300 rounded-md shadow-sm placeholder-zinc-400 focus:outline-none focus:ring-zinc-500 focus:border-zinc-500 sm:text-sm"
-                  placeholder="Full Name"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="email"
-                  className="text-sm font-medium text-zinc-700 sr-only"
-                >
-                  Email address
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  className="w-full px-3 py-2 border border-zinc-300 rounded-md shadow-sm placeholder-zinc-400 focus:outline-none focus:ring-zinc-500 focus:border-zinc-500 sm:text-sm"
-                  placeholder="Email address"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="organizationName"
-                  className="text-sm font-medium text-zinc-700 sr-only"
-                >
-                  Organization Name
-                </label>
-                <input
-                  id="organizationName"
-                  name="organizationName"
-                  type="text"
-                  autoComplete="organization"
-                  required
-                  className="w-full px-3 py-2 border border-zinc-300 rounded-md shadow-sm placeholder-zinc-400 focus:outline-none focus:ring-zinc-500 focus:border-zinc-500 sm:text-sm"
-                  placeholder="Organization Name"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="password"
-                  className="text-sm font-medium text-zinc-700 sr-only"
-                >
-                  Password
-                </label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="new-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-zinc-300 rounded-md shadow-sm placeholder-zinc-400 focus:outline-none focus:ring-zinc-500 focus:border-zinc-500 sm:text-sm"
-                  placeholder="Password"
-                />
-                <PasswordStrength password={password} />
-              </div>
-
-              <div>
-                <button
-                  type="submit"
-                  disabled={isRegistering}
-                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-zinc-900 hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isRegistering ? (
-                    <div className="flex items-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Creating account...
-                    </div>
-                  ) : (
-                    'Create account'
-                  )}
-                </button>
-              </div>
-            </form>
-            {message && <p className="text-sm text-center text-green-600 bg-green-100 p-3 rounded-md">{message}</p>}
-            {error && <p className="text-sm text-center text-red-600 bg-red-100 p-3 rounded-md">{error}</p>}
-            <p className="text-sm text-center text-zinc-600">
-              Already have an account?{' '}
-              <Link
-                href="/login"
-                className="font-medium text-zinc-900 hover:text-zinc-700"
-              >
-                Sign in
+              <Link href="/landing-page" className="inline-flex items-center space-x-3 mb-6">
+                <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
+                  <BuildingOfficeIcon className="w-6 h-6 text-white" />
+                </div>
+                <span className="text-2xl font-bold text-gray-900">Real Insights</span>
               </Link>
-            </p>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Create your account</h1>
+              <p className="text-gray-600">Start managing your portfolio today</p>
+            </motion.div>
+
+            {/* Signup Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+            >
+              <Card className="p-8">
+                {/* OAuth Buttons */}
+                <div className="space-y-3 mb-6">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="w-full"
+                    onClick={handleGoogleSignup}
+                  >
+                    <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    Continue with Google
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="w-full"
+                    onClick={handleMicrosoftSignup}
+                  >
+                    <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
+                      <path fill="#f25022" d="M1 1h10v10H1z"/>
+                      <path fill="#00a4ef" d="M13 1h10v10H13z"/>
+                      <path fill="#7fba00" d="M1 13h10v10H1z"/>
+                      <path fill="#ffb900" d="M13 13h10v10H13z"/>
+                    </svg>
+                    Continue with Microsoft
+                  </Button>
+                </div>
+
+                {/* Divider */}
+                <div className="relative mb-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-200"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-2 bg-white text-gray-500">Or create account with email</span>
+                  </div>
+                </div>
+
+                {/* Signup Form */}
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <Input
+                    label="Full Name"
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Enter your full name"
+                    icon={<UserIcon className="w-5 h-5" />}
+                  />
+
+                  <Input
+                    label="Email address"
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="Enter your email"
+                    icon={<EnvelopeIcon className="w-5 h-5" />}
+                  />
+
+                  <Input
+                    label="Organization Name"
+                    type="text"
+                    required
+                    value={formData.organizationName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, organizationName: e.target.value }))}
+                    placeholder="Enter your organization name"
+                    icon={<BuildingOffice2Icon className="w-5 h-5" />}
+                  />
+
+                  <div className="relative">
+                    <Input
+                      label="Password"
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={formData.password}
+                      onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                      placeholder="Create a password"
+                      icon={<LockClosedIcon className="w-5 h-5" />}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-8 text-gray-400 hover:text-gray-600"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeSlashIcon className="w-5 h-5" />
+                      ) : (
+                        <EyeIcon className="w-5 h-5" />
+                      )}
+                    </button>
+                    <PasswordStrength password={formData.password} />
+                  </div>
+
+                  <div className="text-sm text-gray-600">
+                    By creating an account, you agree to our{' '}
+                    <Link href="#" className="text-blue-600 hover:text-blue-500">
+                      Terms of Service
+                    </Link>{' '}
+                    and{' '}
+                    <Link href="#" className="text-blue-600 hover:text-blue-500">
+                      Privacy Policy
+                    </Link>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    variant="gradient"
+                    size="lg"
+                    className="w-full"
+                    loading={isRegistering}
+                  >
+                    Create account
+                  </Button>
+                </form>
+
+                {/* Messages */}
+                {message && (
+                  <motion.div 
+                    className="mt-6"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                  >
+                    <Alert variant="success" icon={<CheckCircleIcon className="w-5 h-5" />}>
+                      {message}
+                    </Alert>
+                  </motion.div>
+                )}
+
+                {error && (
+                  <motion.div 
+                    className="mt-6"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                  >
+                    <Alert variant="error">
+                      {error}
+                    </Alert>
+                  </motion.div>
+                )}
+
+                {/* Login link */}
+                <div className="mt-6 text-center">
+                  <p className="text-sm text-gray-600">
+                    Already have an account?{' '}
+                    <Link
+                      href="/login"
+                      className="font-medium text-blue-600 hover:text-blue-500 transition-colors"
+                    >
+                      Sign in
+                    </Link>
+                  </p>
+                </div>
+              </Card>
+            </motion.div>
+
+            {/* Footer */}
+            <motion.div 
+              className="mt-8 text-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+            >
+              <p className="text-sm text-gray-500">
+                Join 500+ real estate professionals
+              </p>
+            </motion.div>
           </div>
-        </main>
+        </Container>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        <div className="text-center p-4">
-          <div className="mx-auto mb-6 w-16 h-16 flex items-center justify-center bg-blue-100 rounded-full">
-            <svg
-              className="w-10 h-10 text-blue-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="1.5"
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              ></path>
-            </svg>
+      {/* OTP Verification Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Verify your email"
+        size="sm"
+      >
+        <div className="text-center">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <EnvelopeIcon className="w-8 h-8 text-blue-600" />
           </div>
-          <h2 className="text-2xl font-bold mb-2">Enter OTP Code</h2>
-          <p className="text-zinc-600 mb-6">
-            An OTP has been sent to{' '}
-            <span className="font-semibold text-zinc-800">
-              {emailToVerify}
-            </span>
-            .
+          <p className="text-gray-600 mb-6">
+            We've sent a 6-digit verification code to{' '}
+            <span className="font-medium text-gray-900">{emailToVerify}</span>
           </p>
-          <div className="flex flex-col items-center">
+
+          <div className="space-y-4">
             <OtpInput length={6} onChange={setOtp} />
-            <button
+
+            {error && (
+              <Alert variant="error">
+                {error}
+              </Alert>
+            )}
+
+            {resendMessage && (
+              <Alert variant="success">
+                {resendMessage}
+              </Alert>
+            )}
+
+            <Button
               onClick={handleOtpVerification}
-              disabled={isVerifying || otp.length !== 6}
-              className="w-full mt-6 py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              variant="gradient"
+              size="lg"
+              className="w-full"
+              loading={isVerifying}
+              disabled={otp.length !== 6}
             >
-              {isVerifying ? 'Verifying...' : 'Verify OTP'}
-            </button>
-            {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-            <div className="mt-4 text-sm text-center">
+              Verify Email
+            </Button>
+
+            <div className="text-center">
               {resendTimer > 0 ? (
-                <p className="text-zinc-500">
-                  Resend OTP in {resendTimer}s
+                <p className="text-sm text-gray-500">
+                  Resend code in {resendTimer}s
                 </p>
               ) : (
                 <button
                   onClick={handleResendOtp}
-                  className="font-medium text-blue-600 hover:text-blue-500"
+                  className="text-sm text-blue-600 hover:text-blue-500"
                 >
-                  Resend OTP
+                  Resend verification code
                 </button>
               )}
-              {resendMessage && <p className="mt-2 text-sm text-green-600">{resendMessage}</p>}
             </div>
           </div>
         </div>

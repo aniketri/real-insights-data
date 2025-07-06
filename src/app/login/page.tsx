@@ -1,24 +1,44 @@
 'use client';
+
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 import { FormEvent, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { Button, Input, Card, Alert, Container } from '../../components/ui/design-system';
+import { 
+  BuildingOfficeIcon, 
+  EyeIcon, 
+  EyeSlashIcon,
+  EnvelopeIcon,
+  LockClosedIcon
+} from '@heroicons/react/24/outline';
 
 function LoginForm() {
   const searchParams = useSearchParams();
   const error = searchParams.get('error');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-
-    await signIn('credentials', {
-      email,
-      password,
-      callbackUrl: '/dashboard',
-    });
+    setIsLoading(true);
+    
+    try {
+      await signIn('credentials', {
+        email: formData.email,
+        password: formData.password,
+        callbackUrl: '/dashboard',
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   const handleMicrosoftLogin = async () => {
@@ -32,121 +52,219 @@ function LoginForm() {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    try {
+      await signIn('google', { 
+        callbackUrl: '/dashboard',
+        redirect: true 
+      });
+    } catch (error) {
+      console.error('Google login error:', error);
+    }
+  };
+
+  const getErrorMessage = (error: string) => {
+    switch (error) {
+      case 'CredentialsSignin':
+        return 'Invalid email or password. Please try again.';
+      case 'OAuthAccountNotLinked':
+        return 'Account not linked. Please use the same sign-in method you used when creating your account.';
+      case 'Callback':
+        return 'Authentication error. Please check your OAuth configuration.';
+      default:
+        return `Authentication error: ${error}`;
+    }
+  };
+
   return (
-    <div className="flex flex-col min-h-screen bg-[#F8F8F8]">
-      <header className="fixed top-0 left-0 right-0 z-10 bg-[#F8F8F8]/80 backdrop-blur-sm">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="flex items-center justify-between border-b border-zinc-200 h-20">
-            <Link href="/landing-page" className="flex items-center gap-4">
-              <div className="size-5">
-                <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path fillRule="evenodd" clipRule="evenodd" d="M24 4H6V17.3333V30.6667H24V44H42V30.6667V17.3333H24V4Z" fill="currentColor"></path>
-                </svg>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+      
+      <Container className="relative z-10">
+        <div className="max-w-md mx-auto">
+          {/* Header */}
+          <motion.div 
+            className="text-center mb-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <Link href="/landing-page" className="inline-flex items-center space-x-3 mb-6">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
+                <BuildingOfficeIcon className="w-6 h-6 text-white" />
               </div>
-              <span className="text-2xl font-semibold">Real Insights</span>
+              <span className="text-2xl font-bold text-gray-900">Real Insights</span>
             </Link>
-            <nav className="flex items-center gap-6">
-              <Link href="/signup" className="text-sm font-medium hover:text-zinc-600 transition-colors">
-                Sign Up
-              </Link>
-            </nav>
-          </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome back</h1>
+            <p className="text-gray-600">Sign in to your account to continue</p>
+          </motion.div>
+
+          {/* Login Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+          >
+            <Card className="p-8">
+              {/* Error Alert */}
+              {error && (
+                <motion.div 
+                  className="mb-6"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <Alert variant="error">
+                    {getErrorMessage(error)}
+                  </Alert>
+                </motion.div>
+              )}
+
+              {/* OAuth Buttons */}
+              <div className="space-y-3 mb-6">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full"
+                  onClick={handleGoogleLogin}
+                >
+                  <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  </svg>
+                  Continue with Google
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full"
+                  onClick={handleMicrosoftLogin}
+                >
+                  <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
+                    <path fill="#f25022" d="M1 1h10v10H1z"/>
+                    <path fill="#00a4ef" d="M13 1h10v10H13z"/>
+                    <path fill="#7fba00" d="M1 13h10v10H1z"/>
+                    <path fill="#ffb900" d="M13 13h10v10H13z"/>
+                  </svg>
+                  Continue with Microsoft
+                </Button>
+              </div>
+
+              {/* Divider */}
+              <div className="relative mb-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">Or continue with email</span>
+                </div>
+              </div>
+
+              {/* Login Form */}
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <Input
+                  label="Email address"
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="Enter your email"
+                  icon={<EnvelopeIcon className="w-5 h-5" />}
+                />
+
+                <div className="relative">
+                  <Input
+                    label="Password"
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={formData.password}
+                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                    placeholder="Enter your password"
+                    icon={<LockClosedIcon className="w-5 h-5" />}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-8 text-gray-400 hover:text-gray-600"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeSlashIcon className="w-5 h-5" />
+                    ) : (
+                      <EyeIcon className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="ml-2 text-sm text-gray-600">Remember me</span>
+                  </label>
+                  <Link
+                    href="/forgot-password"
+                    className="text-sm text-blue-600 hover:text-blue-500 transition-colors"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+
+                <Button
+                  type="submit"
+                  variant="gradient"
+                  size="lg"
+                  className="w-full"
+                  loading={isLoading}
+                >
+                  Sign in
+                </Button>
+              </form>
+
+              {/* Sign up link */}
+              <div className="mt-6 text-center">
+                <p className="text-sm text-gray-600">
+                  Don't have an account?{' '}
+                  <Link
+                    href="/signup"
+                    className="font-medium text-blue-600 hover:text-blue-500 transition-colors"
+                  >
+                    Sign up for free
+                  </Link>
+                </p>
+              </div>
+            </Card>
+          </motion.div>
+
+          {/* Footer */}
+          <motion.div 
+            className="mt-8 text-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+          >
+            <p className="text-sm text-gray-500">
+              Protected by enterprise-grade security
+            </p>
+          </motion.div>
         </div>
-      </header>
-
-      <main className="flex-1 flex items-center justify-center mt-20">
-        <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-md">
-          <h2 className="text-3xl font-bold text-center text-zinc-900">Welcome Back</h2>
-
-          <div className="space-y-4">
-            <button
-              onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
-              className="w-full inline-flex items-center justify-center py-2 px-4 border border-zinc-300 rounded-md shadow-sm bg-white text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-            >
-              <svg className="mr-2 -ml-1 w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48px" height="48px"><path fill="#fbc02d" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12	s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20	s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/><path fill="#e53935" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039	l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/><path fill="#4caf50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36	c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/><path fill="#1565c0" d="M43.611,20.083L43.595,20L42,20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571	c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/></svg>
-              Continue with Google
-            </button>
-            <button
-              onClick={handleMicrosoftLogin}
-              className="w-full inline-flex items-center justify-center py-2 px-4 border border-zinc-300 rounded-md shadow-sm bg-white text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-            >
-              <svg className="mr-2 -ml-1 w-5 h-5" viewBox="0 0 2499.6 2500" xmlns="http://www.w3.org/2000/svg"><path d="m1187.9 1187.9h-1187.9v-1187.9h1187.9z" fill="#f1511b"/><path d="m2499.6 1187.9h-1188v-1187.9h1187.9v1187.9z" fill="#80cc28"/><path d="m1187.9 2500h-1187.9v-1187.9h1187.9z" fill="#00adef"/><path d="m2499.6 2500h-1188v-1187.9h1187.9v1187.9z" fill="#fbbc09"/></svg>
-              Continue with Microsoft
-            </button>
-          </div>
-
-          <div className="flex items-center justify-center space-x-2">
-            <div className="flex-1 h-px bg-zinc-300"></div>
-            <p className="text-sm text-zinc-500">OR</p>
-            <div className="flex-1 h-px bg-zinc-300"></div>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="email" className="text-sm font-medium text-zinc-700 sr-only">
-                Email address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                className="w-full px-3 py-2 border border-zinc-300 rounded-md shadow-sm placeholder-zinc-400 focus:outline-none focus:ring-zinc-500 focus:border-zinc-500 sm:text-sm"
-                placeholder="Email address"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="text-sm font-medium text-zinc-700 sr-only">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                className="w-full px-3 py-2 border border-zinc-300 rounded-md shadow-sm placeholder-zinc-400 focus:outline-none focus:ring-zinc-500 focus:border-zinc-500 sm:text-sm"
-                placeholder="Password"
-              />
-            </div>
-
-            <div className="flex items-center justify-end">
-              <Link href="/forgot-password" className="text-sm font-medium text-zinc-900 hover:text-zinc-700">
-                Forgot password?
-              </Link>
-            </div>
-
-            <div>
-              <button
-                type="submit"
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-zinc-900 hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-500"
-              >
-                Sign in
-              </button>
-            </div>
-          </form>
-
-          {error && <p className="text-sm text-center text-red-600 bg-red-100 p-3 rounded-md">
-            {error === 'CredentialsSignin' ? 'Invalid email or password.' : error === 'Callback' ? 'There was an issue with the authentication provider. Please check your OAuth configuration and redirect URIs in your Google Cloud Platform project. Ensure that http://localhost:3000/api/auth/callback/google is listed as an authorized redirect URI.' : `Error: ${error}`}
-          </p>}
-          
-          <p className="text-sm text-center text-zinc-600">
-            No account?{' '}
-            <Link href="/signup" className="font-medium text-zinc-900 hover:text-zinc-700">
-              Create one
-            </Link>
-          </p>
-        </div>
-      </main>
+      </Container>
     </div>
   );
 }
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    }>
       <LoginForm />
     </Suspense>
   );
