@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
     // Send OTP email
     if (resend) {
         await resend.emails.send({
-          from: 'Real Insights <noreply@realinsights.io>',
+          from: 'Real Insights <noreply@realinsights.com>',
           to: email,
           subject: 'Verify your email',
           react: OtpEmail({ otp })
